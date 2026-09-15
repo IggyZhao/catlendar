@@ -67,10 +67,11 @@ class CatlendarDelegate(NSObject):
         self.status_item.setMenu_(menu)
         self.menu = menu
 
-        self.pet = ui.PetWindow.alloc().initWithAssets_handlers_(
+        self.pet = ui.PetWindow.alloc().initWithAssets_handlers_layer_(
             ASSETS_DIR,
             {"click": self.open_dashboard, "moved": self.remember_pet_position,
              "menu": self.context_menu, "double": self.feed_cat},
+            str(config.setting("cat_layer")),
         )
         saved = db.get_meta("pet_origin")
         if saved:
@@ -109,8 +110,9 @@ class CatlendarDelegate(NSObject):
 
     def checkFullScreen_(self, timer):
         """Step aside while something is running full screen, come back after."""
-        if not config.setting("hide_when_fullscreen") or self.pet is None:
-            return
+        if (self.pet is None or not config.setting("hide_when_fullscreen")
+                or config.setting("cat_layer") == "desktop"):
+            return                      # on the desktop, windows already cover it
         if db.get_meta("pet_hidden", "0") == "1":
             return                      # you hid it yourself; leave it hidden
         try:
@@ -289,6 +291,9 @@ class CatlendarDelegate(NSObject):
         items.append(ui.menu_item(
             ("Hide cat" if self.pet.visible() else "Show cat") + "   ^\u2325C",
             self, "togglePet:"))
+        items.append(ui.menu_item(
+            "Keep cat on top" if config.setting("cat_layer") == "desktop"
+            else "Keep cat on the desktop", self, "toggleLayer:"))
         fed = int(db.get_meta("fed_today_count", 0) or 0) \
             if db.get_meta("fed_today_date", "") == report.today().isoformat() else 0
         items.append(ui.menu_item(
@@ -417,6 +422,15 @@ class CatlendarDelegate(NSObject):
 
     def togglePet_(self, sender):
         self.toggle_pet()
+
+    def toggleLayer_(self, sender):
+        """Desktop: every window covers it. Floating: it sits above them."""
+        layer = "floating" if config.setting("cat_layer") == "desktop" else "desktop"
+        config.set_setting("cat_layer", layer)
+        if self.pet is not None:
+            self.pet.set_layer(layer)
+            self.pet.show()
+        log.info("cat layer is now %s", layer)
 
     def togglePause_(self, sender):
         self.paused_until = 0 if time.time() < self.paused_until else time.time() + 3600

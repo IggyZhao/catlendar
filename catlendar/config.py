@@ -18,6 +18,7 @@ DEFAULTS = {
     "day_start_hour": 4,
     "asleep_after_minutes": 5,
     "hide_when_fullscreen": True,
+    "cat_layer": "desktop",     # desktop: windows cover it. floating: always on top
     "count_meetings_as_work": True,
     "meeting_grace_minutes": 5,
 }
@@ -114,6 +115,24 @@ def _compile(raw):
 
 def setting(name):
     return load()["settings"].get(name, DEFAULTS.get(name))
+
+
+def set_setting(name, value):
+    """Write one setting back to projects.yaml, leaving the rest of the file be."""
+    import re as _re
+    path = ensure_user_config()
+    with open(path, "r", encoding="utf-8") as fh:
+        text = fh.read()
+    line = "  {}: {}".format(name, value)
+    pattern = _re.compile(r"^  {}:.*$".format(_re.escape(name)), _re.MULTILINE)
+    if pattern.search(text):
+        text = pattern.sub(line, text, count=1)
+    else:
+        text = text.replace("settings:", "settings:\n" + line, 1)
+    with open(path, "w", encoding="utf-8") as fh:
+        fh.write(text)
+    load(force=True)
+    return value
 
 
 def redact_title(app, title):

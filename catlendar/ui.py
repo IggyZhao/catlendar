@@ -5,6 +5,7 @@ import os
 import threading
 
 import objc
+import Quartz
 from AppKit import (
     NSApp, NSBackingStoreBuffered, NSColor, NSEvent, NSImage, NSMakeRect, NSMenu,
     NSMenuItem, NSScreen, NSView, NSWindow, NSWindowCollectionBehaviorCanJoinAllSpaces,
@@ -12,6 +13,10 @@ from AppKit import (
     NSWindowStyleMaskBorderless, NSWindowStyleMaskClosable, NSWindowStyleMaskMiniaturizable,
     NSWindowStyleMaskResizable, NSWindowStyleMaskTitled, NSFloatingWindowLevel,
 )
+
+# Sitting on the desktop rather than floating over everything: any window covers
+# the cat, which is what you want when a document or a slideshow is full screen.
+DESKTOP_LEVEL = int(Quartz.CGWindowLevelForKey(Quartz.kCGDesktopIconWindowLevelKey))
 from Foundation import NSURL, NSObject
 from PyObjCTools import AppHelper
 from WebKit import WKWebView, WKWebViewConfiguration
@@ -96,7 +101,7 @@ class DragView(NSView):
 class PetWindow(NSObject):
     """A borderless, always-on-top window holding the animated cat."""
 
-    def initWithAssets_handlers_(self, assets_dir, handlers):
+    def initWithAssets_handlers_layer_(self, assets_dir, handlers, layer):
         self = objc.super(PetWindow, self).init()
         if self is None:
             return None
@@ -108,7 +113,7 @@ class PetWindow(NSObject):
         win.setOpaque_(False)
         win.setBackgroundColor_(NSColor.clearColor())
         win.setHasShadow_(False)
-        win.setLevel_(NSFloatingWindowLevel)
+        win.setLevel_(DESKTOP_LEVEL if layer == "desktop" else NSFloatingWindowLevel)
         win.setIgnoresMouseEvents_(False)
         win.setCollectionBehavior_(
             NSWindowCollectionBehaviorCanJoinAllSpaces
@@ -132,6 +137,10 @@ class PetWindow(NSObject):
         self.web = web
         self.ready = False
         return self
+
+    @objc.python_method
+    def set_layer(self, layer):
+        self.window.setLevel_(DESKTOP_LEVEL if layer == "desktop" else NSFloatingWindowLevel)
 
     @objc.python_method
     def show(self):

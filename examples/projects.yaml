@@ -15,6 +15,7 @@ settings:
   day_start_hour: 4               # a day runs 4am to 4am, so 1am counts as last night
   count_meetings_as_work: true    # a calendar meeting counts even with no input
   hide_when_fullscreen: true      # step aside for slideshows
+  cat_layer: desktop              # desktop: any window covers the cat. floating: always on top
 
   # Folders holding one subfolder per project. `catlendar scan` turns each
   # subfolder into a project, tagged with the kind you give here.

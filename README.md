@@ -178,8 +178,13 @@ Every pose is tied to something the app knows:
 
 It stretches when you come back, washes its face while you work, hops when you
 tick something off, and **you can feed it by double clicking**. Drag it anywhere.
-`Control Option C` hides and shows it, and it steps aside on its own when
-something goes full screen.
+`Control Option C` hides and shows it.
+
+By default the cat lives **on the desktop**, so any window covers it: a document,
+a browser, a slideshow, full screen or merely maximized. You see it when you can
+see your desktop, and never over what you are presenting. If you would rather it
+floated above everything, there is "Keep cat on top" in its menu, or set
+`cat_layer: floating`.
 
 ## Privacy
 
