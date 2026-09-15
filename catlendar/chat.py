@@ -50,12 +50,36 @@ Only use a project key from the list you are given. One block per reply at most.
 You cannot change the user's real calendar; say so if asked."""
 
 
+# An app started at login gets a bare PATH (/usr/bin:/bin:/usr/sbin:/sbin), so
+# shutil.which alone would not find a tool installed in a user directory. Look
+# where it actually gets installed.
+CLI_LOCATIONS = [
+    "~/.local/bin/claude",
+    "~/.claude/local/claude",
+    "/opt/homebrew/bin/claude",
+    "/usr/local/bin/claude",
+    "~/bin/claude",
+    "~/AppData/Roaming/npm/claude.cmd",
+]
+
+
+def find_cli():
+    found = shutil.which("claude")
+    if found:
+        return found
+    for candidate in CLI_LOCATIONS:
+        path = os.path.expanduser(candidate)
+        if os.path.isfile(path) and os.access(path, os.X_OK):
+            return path
+    return None
+
+
 def available():
     """Which backend, if any, is ready."""
-    if shutil.which("claude"):
-        return "cli"
     if os.environ.get("ANTHROPIC_API_KEY"):
         return "api"
+    if find_cli():
+        return "cli"
     return None
 
 
@@ -105,9 +129,9 @@ def ask(question):
     """Returns {reply, actions, backend, error}."""
     backend = available()
     if backend is None:
-        return {"reply": "No model is set up. Either sign in to the `claude` command "
-                         "line tool, or set ANTHROPIC_API_KEY.",
-                "actions": [], "backend": None}
+        return {"reply": "No model is set up. Install the Claude command line tool "
+                         "and sign in, or set ANTHROPIC_API_KEY.",
+                "actions": [], "backend": None, "error": True}
 
     prompt = "{}\n\nHere is the user's data as JSON:\n{}\n\nQuestion: {}".format(
         INSTRUCTIONS, json.dumps(build_context(), ensure_ascii=False), question)
@@ -123,14 +147,22 @@ def ask(question):
 
 
 def _call_cli(prompt):
-    res = subprocess.run(["claude", "-p", prompt], capture_output=True,
-                         text=True, timeout=TIMEOUT)
+    binary = find_cli()
+    if binary is None:
+        raise RuntimeError("the claude command line tool is not installed")
+    # without this the tool waits three seconds for stdin that never comes, and
+    # its warning about that lands in stderr and reads like the error
+    res = subprocess.run([binary, "-p", prompt], capture_output=True, text=True,
+                         timeout=TIMEOUT, stdin=subprocess.DEVNULL)
     if res.returncode != 0:
-        detail = (res.stderr or res.stdout).strip().splitlines()
-        first = detail[0] if detail else "unknown error"
-        if "auth" in first.lower() or "login" in first.lower():
-            raise RuntimeError("the claude tool needs signing in again. "
-                               "Run `claude` once in a terminal.")
+        lines = [l for l in (res.stderr or res.stdout).strip().splitlines()
+                 if l.strip() and not l.lower().startswith("warning:")]
+        first = lines[0] if lines else "unknown error"
+        low = first.lower()
+        if "auth" in low or "login" in low or "oauth" in low or "expired" in low:
+            raise RuntimeError(
+                "your Claude sign in has expired. Open a terminal, run: claude "
+                "  then /login, and ask again. Or set ANTHROPIC_API_KEY.")
         raise RuntimeError(first[:200])
     return res.stdout.strip()
 
