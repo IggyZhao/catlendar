@@ -7,6 +7,11 @@ from . import config, db
 
 WORK_STATES = ("active", "meeting")
 SLOT = 600     # ten minutes: the unit everything is counted in
+
+# Markers for where a slot came from, not kinds of work. They still decide which
+# slots count and which project they belong to; they just do not belong in a
+# chart answering "what kind of work was this".
+SOURCE_MARKERS = {"claude", "files"}
 KIND_LABELS = {"research": "Research", "teaching": "Teaching", "service": "Service",
                "admin": "Admin", "unassigned": "Unmatched"}
 
@@ -317,7 +322,8 @@ def summarize(start_ts, end_ts, scope="day"):
         "projects": rows(Counter({k: v for k, v in by_project.items() if k}), config.project_label)
                     + ([{"key": None, "label": "Unmatched", "seconds": unmatched,
                          "share": (unmatched / total) if total else 0.0}] if unmatched else []),
-        "activities": rows(by_activity, _activity_label),
+        "activities": rows(Counter({k: v for k, v in by_activity.items()
+                                    if k not in SOURCE_MARKERS}), _activity_label),
         "apps": [{"label": k or "Unknown", "seconds": v} for k, v in by_app.most_common(12)],
         "hours": [{"hour": h, "seconds": by_hour.get(h, 0)} for h in range(24)],
         "days": _day_series(by_day, start_ts, end_ts, scope),
