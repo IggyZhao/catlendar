@@ -1,0 +1,40 @@
+#!/bin/bash
+# Day to day control for the macOS app.
+set -e
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+APP="$ROOT/Catlendar.app"
+PY="${CATLENDAR_PYTHON:-$ROOT/.venv/bin/python3}"
+LABEL="com.catlendar.app"
+PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
+
+case "${1:-status}" in
+  start)    open "$APP"; echo "started";;
+  stop)     pkill -f "catlendar.app" || true; echo "stopped";;
+  restart)  pkill -f "catlendar.app" || true; sleep 1; open "$APP"; echo "restarted";;
+  build)    "$ROOT/scripts/build_macos.sh";;
+  login-on) cat > "$PLIST" <<PL
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key><string>$LABEL</string>
+    <key>ProgramArguments</key>
+    <array><string>/usr/bin/open</string><string>-a</string><string>$APP</string></array>
+    <key>RunAtLoad</key><true/>
+    <key>KeepAlive</key><false/>
+    <key>ProcessType</key><string>Background</string>
+</dict>
+</plist>
+PL
+            launchctl unload "$PLIST" 2>/dev/null || true
+            launchctl load "$PLIST"
+            echo "will start at login";;
+  login-off) launchctl unload "$PLIST" 2>/dev/null || true; rm -f "$PLIST"; echo "will not start at login";;
+  log)      tail -n 40 -f "$HOME/Library/Application Support/Catlendar/logs/catlendar.log";;
+  rules)    open "$HOME/Library/Application Support/Catlendar/projects.yaml";;
+  pipeline) open "$HOME/Library/Application Support/Catlendar/pipeline.yaml";;
+  scan)     "$PY" -m catlendar scan;;
+  status)   pgrep -f "catlendar.app" >/dev/null && echo "running" || echo "not running"
+            "$PY" -m catlendar status;;
+  *) echo "usage: catlendar-ctl {start|stop|restart|build|login-on|login-off|log|rules|pipeline|scan|status}";;
+esac

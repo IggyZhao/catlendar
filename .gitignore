@@ -1,0 +1,37 @@
+# Your data never belongs in the repo
+*.db
+*.db-wal
+*.db-shm
+*.log
+logs/
+reports/
+projects.yaml
+pipeline.yaml
+goodnews.yaml
+# but the shipped examples are the templates the app bootstraps from
+!examples/projects.yaml
+!examples/pipeline.yaml
+*.bak
+*.premigrate
+
+# Build output
+Catlendar.app/
+*.o
+*.dSYM/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+*.egg-info/
+build/
+dist/
+
+# Editors and OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+_preview*.html

@@ -1,0 +1,100 @@
+# Catlendar rules. Copy this to your data folder on first run, then edit freely.
+# The app re-reads it within a minute, no restart needed.
+#
+# Matching is case insensitive over "<app name> | <window title>", and over file
+# and prompt paths. The LONGEST matching keyword wins, so a specific phrase beats
+# a generic one. A keyword starting with a letter or digit only matches at a word
+# start, so "review" does not fire inside "Preview".
+
+settings:
+  sample_interval_seconds: 10     # how often to look at the front window
+  idle_after_seconds: 150         # no input for this long and you are idle
+  asleep_after_minutes: 5         # untouched this long and the cat curls up
+  calendar_sync_minutes: 10       # how often to re-read the calendar (macOS)
+  meeting_grace_minutes: 5        # count time this far outside an event as in it
+  day_start_hour: 4               # a day runs 4am to 4am, so 1am counts as last night
+  count_meetings_as_work: true    # a calendar meeting counts even with no input
+  hide_when_fullscreen: true      # step aside for slideshows
+
+  # Folders holding one subfolder per project. `catlendar scan` turns each
+  # subfolder into a project, tagged with the kind you give here.
+  project_roots:
+    - {path: "~/Documents/Research", kind: research}
+    - {path: "~/Documents/Teaching", kind: teaching}
+    - {path: "~/Documents/Service",  kind: service}
+
+  # Folders watched for saved files. Leave empty to let Catlendar guess.
+  watch_folders: []
+
+  # Calendars that are not meetings.
+  exclude_calendars:
+    - US Holidays
+    - Birthdays
+
+  outlook_applescript: false      # the current Outlook for Mac answers with nothing
+
+privacy:
+  # A window title containing any of these is stored as "(private)".
+  # The time still counts, the text does not.
+  redact_title_contains:
+    - 1password
+    - keychain
+    - private browsing
+    - incognito
+  # Apps whose titles are never stored at all.
+  redact_apps:
+    - 1Password
+    - Messages
+
+# ---------------------------------------------------------------------------
+# What kind of work is this? First matching rule wins, keywords beat apps.
+# ---------------------------------------------------------------------------
+activities:
+  - key: meeting
+    label: Meetings
+    apps: ["zoom.us", "Zoom", "Microsoft Teams", "Webex", "Google Meet"]
+    keywords: ["zoom meeting", "google meet", "teams meeting"]
+  - key: analysis
+    label: Data & Analysis
+    apps: ["RStudio", "Stata", "Jupyter", "Tableau", "Microsoft Excel", "Excel"]
+    keywords: [".do ", ".dta", ".ipynb", "jupyter", "colab"]
+  - key: code
+    label: Code & Build
+    apps: ["Cursor", "Visual Studio Code", "Code", "Terminal", "iTerm2", "Warp",
+           "Xcode", "Claude", "GitHub Desktop", "WindowsTerminal", "powershell"]
+    keywords: ["github.com", "localhost:"]
+  - key: writing
+    label: Writing
+    apps: ["Microsoft Word", "WINWORD", "Pages", "Scrivener", "TextEdit", "Obsidian", "Notion"]
+    keywords: ["overleaf", "google docs", ".docx", ".tex"]
+  - key: reading
+    label: Reading & Lit
+    apps: ["Preview", "Zotero", "Adobe Acrobat", "Skim", "Papers", "SumatraPDF"]
+    keywords: ["google scholar", "arxiv", "ssrn", "pubmed", "jstor", ".pdf"]
+  - key: comms
+    label: Email & Messages
+    apps: ["Microsoft Outlook", "OUTLOOK", "Mail", "Slack", "Spark"]
+    keywords: ["gmail", "outlook.office", "inbox"]
+  - key: admin
+    label: Admin & Slides
+    apps: ["Microsoft PowerPoint", "POWERPNT", "Keynote", "Numbers", "Calendar",
+           "Reminders", "Finder", "explorer", "System Settings"]
+    keywords: ["docusign", "expense"]
+  - key: personal
+    label: Personal & Breaks
+    apps: ["Music", "Spotify", "Photos", "TV", "News"]
+    keywords: ["youtube", "netflix", "reddit", "instagram", "tiktok"]
+  - key: browsing
+    label: Web
+    apps: ["Google Chrome", "chrome", "Safari", "Arc", "Firefox", "Microsoft Edge", "msedge"]
+
+# ---------------------------------------------------------------------------
+# Your projects. Run `catlendar scan` to fill this in from project_roots,
+# or write them by hand in this shape.
+# ---------------------------------------------------------------------------
+projects:
+  - key: example-project
+    label: "Example Project"
+    kind: research
+    paths: ["Research/Example Project"]
+    keywords: ["example project", "exproj"]

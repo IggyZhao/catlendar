@@ -1,0 +1,35 @@
+# Catlendar pipeline. Copied to your data folder on first run.
+# status: to_be_done | in_prep | under_review | accepted | rejected | done | not_done
+#
+# date_role says what a date means in that section:
+#   deadline  - something to hit, drives the overdue banner and the to do list
+#   submitted - history, such as when something went out or came back
+#   none      - dates are not used
+sections:
+  - key: under_review
+    label: "Under review"
+    date_role: submitted
+    note: "Out for review, waiting on a decision."
+    items:
+      - text: "A paper you have submitted"
+        venue: "Journal name"
+        date: "2026-01-15"
+        status: under_review
+
+  - key: to_submit
+    label: "In preparation"
+    date_role: deadline
+    note: "Written, not out the door yet."
+    items:
+      - text: "A paper you are writing"
+        venue: "Journal name"
+        date: "2026-03-01"
+        status: in_prep
+
+  - key: deadlines
+    label: "Deadlines"
+    date_role: deadline
+    note: "Everything with a date on it."
+    items:
+      - {text: "A review you owe", date: "2026-02-10", status: to_be_done}
+      - {text: "Something you finished", date: "2026-01-05", status: done}

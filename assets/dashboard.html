@@ -1,0 +1,1237 @@
+<meta charset="utf-8">
+<title>Catlendar</title>
+<style>
+  :root{
+    color-scheme: light;
+    --paper:#F5F3EE; --card:#FFFFFF; --inset:#FAF9F6;
+    --ink:#1F1E1D; --ink-2:#6B6862; --ink-3:#9A968E;
+    --rule:#E6E2D9; --rule-soft:#EFECE4;
+    --accent:#C15F3C; --accent-soft:#FAEEE8; --accent-line:#E6C3B3;
+    --good:#2F7D4F; --warn:#B8860B; --bad:#B4453A;
+    /* Greens, purples, oranges and reds. No blue. Chroma held at 0.112, which
+       is the lowest saturation that still clears every colourblind gate; the
+       lightness spread is what carries the separation. */
+    --s1:#32743a; --s2:#ca7c53; --s3:#5a4a91; --s4:#cba04e;
+    --s5:#269f81; --s6:#96609e; --s7:#a0a54d; --s8:#ac5756; --s9:#9C978E;
+    --seq-0:#EFEDE7; --seq-1:#cbe4cc; --seq-2:#b0d4b1; --seq-3:#91c194;
+    --seq-4:#76ad79; --seq-5:#58955d; --seq-6:#3b7d42;
+    --serif: ui-serif, "New York", Georgia, "Times New Roman", serif;
+    --sans: ui-sans-serif, -apple-system, BlinkMacSystemFont, "SF Pro Text", Helvetica, Arial, sans-serif;
+    --r:14px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);
+       font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+  /* edge to edge: the page is a dashboard, not a column of prose. Prose itself
+     is still held to a readable measure by .lede. */
+  .wrap{max-width:none;margin:0;padding-block:26px 64px;padding-left:26px;padding-right:26px}
+  @media (min-width:1500px){.wrap{padding-left:34px;padding-right:34px}}
+
+  /* masthead */
+  header{display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap;
+         padding-bottom:16px;border-bottom:1px solid var(--rule);margin-bottom:22px}
+  .mark{display:flex;align-items:center;gap:11px}
+  .mark h1{font-family:var(--serif);font-size:25px;font-weight:500;margin:0;letter-spacing:-.2px}
+  .mark .date{font-size:12.5px;color:var(--ink-3)}
+  .daynav{display:flex;align-items:center;gap:4px;margin-top:2px}
+  .daynav button{border:0;background:transparent;color:var(--ink-3);cursor:pointer;
+    font:inherit;font-size:15px;line-height:1;padding:1px 5px;border-radius:6px}
+  .daynav button:hover:not(:disabled){background:#EDEAE2;color:var(--ink)}
+  .daynav button:disabled{opacity:.28;cursor:default}
+  .daynav .todaybtn{font-size:11px;color:var(--accent);padding:2px 8px;
+    border:1px solid var(--accent-line);border-radius:99px;margin-left:5px}
+  .daynav .todaybtn:hover{background:var(--accent-soft)}
+  .daynav .todaybtn[hidden]{display:none}
+  .tabs{display:flex;gap:2px;margin-left:auto;background:#EDEAE2;padding:3px;border-radius:10px}
+  .tabs button{appearance:none;border:0;background:transparent;color:var(--ink-2);font:inherit;
+    font-size:13px;padding:6px 15px;border-radius:8px;cursor:pointer;transition:.12s}
+  .tabs button[aria-selected="true"]{background:var(--card);color:var(--ink);
+    box-shadow:0 1px 2px rgba(31,30,29,.09)}
+  .tabs button:hover:not([aria-selected="true"]){color:var(--ink)}
+
+  /* the opening sentence */
+  .lede{font-family:var(--serif);font-size:21px;line-height:1.5;margin:0 0 22px;max-width:82ch;
+        color:var(--ink);font-weight:400}
+  .lede em{font-style:normal;color:var(--accent);border-bottom:1.5px solid var(--accent-line);
+           padding-bottom:1px}
+  .lede .dim{color:var(--ink-3)}
+
+  /* tiles */
+  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));gap:12px;margin-bottom:20px}
+  .tile{background:var(--card);border:1px solid var(--rule);border-radius:var(--r);padding:15px 17px}
+  .tile .k{font-size:10.5px;text-transform:uppercase;letter-spacing:.9px;color:var(--ink-3);font-weight:500}
+  .tile .v{font-family:var(--serif);font-size:30px;line-height:1.1;margin-top:8px;letter-spacing:-.6px}
+  .tile .n{font-size:12px;color:var(--ink-2);margin-top:5px}
+  .tile.hero{background:linear-gradient(160deg,var(--accent-soft),var(--card) 62%);border-color:var(--accent-line)}
+  .tile.hero .v{font-size:38px;color:var(--ink)}
+
+  /* cards */
+  .card{background:var(--card);border:1px solid var(--rule);border-radius:var(--r);
+        padding:18px 20px;margin-bottom:14px}
+  .card h2{font-family:var(--serif);margin:0 0 3px;font-size:17px;font-weight:500;letter-spacing:-.1px}
+  .card .cap{margin:0 0 16px;font-size:12.5px;color:var(--ink-3)}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
+  .grid2 > *{min-width:0}
+  .daygrid{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:18px;align-items:start}
+  .daygrid > *{min-width:0}
+  .rail{position:sticky;top:18px}
+  @media (max-width:1000px){.daygrid{grid-template-columns:1fr}.rail{position:static}}
+  .rail .card{padding:14px 15px}
+  .rail h2{font-size:15px}
+  .railrow{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--rule-soft);font-size:12.5px}
+  .railrow:last-child{border-bottom:0}
+  .railrow .t{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink)}
+  .railrow .d{flex:0 0 auto;font-size:11.5px;color:var(--ink-3);font-variant-numeric:tabular-nums}
+  .railrow .d.soon{color:var(--accent);font-weight:600}
+  .railrow .d.past{color:var(--bad);font-weight:600}
+  .railmore{margin-top:10px;font-size:12px;color:var(--accent);cursor:pointer;
+            background:none;border:0;padding:0;font-family:inherit}
+  .railmore:hover{text-decoration:underline}
+  .gnrow{display:flex;align-items:flex-start;gap:8px;padding:7px 0;
+         border-bottom:1px solid var(--rule-soft);font-size:12.5px}
+  .gnrow:last-child{border-bottom:0}
+  .gndate{flex:0 0 auto;color:var(--ink-3);font-size:11px;padding-top:1px;
+          font-variant-numeric:tabular-nums;min-width:32px}
+  .gntext{flex:1 1 auto;min-width:0;color:var(--ink);line-height:1.4}
+  .gnrow .del{flex:0 0 auto;border:0;background:transparent;color:var(--ink-3);cursor:pointer;
+              font-size:15px;line-height:1;padding:1px 5px;border-radius:6px;opacity:0}
+  .gnrow:hover .del{opacity:1}
+  .gnrow .del:hover{background:#F6E9E6;color:var(--bad)}
+  .mrow{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--rule-soft)}
+  .mrow:last-of-type{border-bottom:0}
+  .mrow input[type=time]{font:inherit;font-size:12.5px;border:1px solid var(--rule);border-radius:7px;
+    padding:3px 6px;background:var(--card);color:var(--ink);font-variant-numeric:tabular-nums}
+  .mrow select{font:inherit;font-size:12.5px;border:1px solid var(--rule);border-radius:7px;
+    padding:4px 6px;background:var(--card);color:var(--ink);flex:1 1 auto;min-width:0;max-width:260px}
+  .mrow .mode{font-size:11px;color:var(--ink-2);border:1px solid var(--rule);border-radius:99px;
+    padding:2px 9px;cursor:pointer;background:var(--card);white-space:nowrap}
+  .mrow .mode[data-mode="only"]{background:var(--accent-soft);border-color:var(--accent-line);color:var(--accent)}
+  .overlap{font-size:12px;color:var(--ink-3);margin:-6px 0 18px}
+  @media (max-width:820px){.grid2{grid-template-columns:1fr}}
+  .scrollx{overflow-x:auto}
+  .lanes{display:flex;align-items:flex-start;gap:0}
+  .lanes .lanelabels{flex:0 0 auto}
+  .lanes .scrollx{flex:1 1 auto;min-width:0}
+  .empty{color:var(--ink-3);font-size:13px;padding:22px 0;text-align:center}
+  .legend{display:flex;flex-wrap:wrap;gap:13px;margin-top:14px;font-size:12px;color:var(--ink-2)}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .legend i{width:9px;height:9px;border-radius:2.5px;display:inline-block}
+
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{text-align:left;font-weight:500;color:var(--ink-3);font-size:10.5px;text-transform:uppercase;
+     letter-spacing:.8px;padding:0 10px 9px 0;border-bottom:1px solid var(--rule)}
+  td{padding:9px 10px 9px 0;border-bottom:1px solid var(--rule-soft);color:var(--ink-2);vertical-align:top}
+  td.num{text-align:right;font-variant-numeric:tabular-nums;color:var(--ink);white-space:nowrap}
+  tr:last-child td{border-bottom:0}
+  .truncate{max-width:430px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;vertical-align:bottom}
+  .swatch{width:8px;height:8px;border-radius:2px;display:inline-block;margin-right:8px}
+  .pill{display:inline-block;padding:1.5px 8px;border-radius:99px;font-size:11px;
+        background:var(--inset);color:var(--ink-2);border:1px solid var(--rule)}
+
+  #tip{position:fixed;pointer-events:none;z-index:50;background:var(--ink);color:#FAF9F6;
+       border-radius:9px;padding:8px 11px;font-size:12px;opacity:0;transition:opacity .09s;
+       box-shadow:0 8px 24px rgba(31,30,29,.22);max-width:330px;line-height:1.45}
+  #tip .t-k{color:#BDB9B1;font-size:11px}
+  svg{display:block}
+  /* only unclassed axis text. A bare `.axis text` rule outranks .bar-val and
+     .lane-label, which silently repaints every label grey. */
+  .axis text:not([class]){fill:var(--ink-3);font-size:10px;font-family:var(--sans)}
+  .axis text{font-family:var(--sans)}
+  .lane-label{fill:var(--ink-2);font-size:11px}
+  .bar-val{fill:var(--ink);font-size:11px;font-variant-numeric:tabular-nums}
+  .bar-lab{fill:var(--ink-2);font-size:11px}
+  .mark-el{cursor:default}
+  .mark-el:hover{stroke:var(--ink);stroke-width:1.4}
+
+  /* pipeline */
+  .sec-head{display:flex;align-items:baseline;gap:10px;margin:26px 0 10px}
+  .sec-head h3{font-family:var(--serif);font-size:16px;font-weight:500;margin:0}
+  .sec-head .note{font-size:12px;color:var(--ink-3)}
+  .sec-head .count{margin-left:auto;font-size:12px;color:var(--ink-3)}
+  .row{display:flex;align-items:center;gap:10px;padding:8px 10px;border-bottom:1px solid var(--rule-soft)}
+  .row:last-child{border-bottom:0}
+  .row:hover{background:var(--inset)}
+  .chip{flex:0 0 auto;border:1px solid var(--rule);background:var(--card);border-radius:99px;
+        padding:2px 10px;font-size:11px;cursor:pointer;color:var(--ink-2);white-space:nowrap;user-select:none}
+  .chip[data-status="accepted"]{background:#E9F2EA;border-color:#B9D6BC;color:#2C6135}
+  .chip[data-status="done"]{background:#EEF1EC;border-color:#CFD8CE;color:#4A6150}
+  .chip[data-status="under_review"]{background:#F6EEDF;border-color:#DFC894;color:#7A5A15}
+  .chip[data-status="in_prep"]{background:#F8EDE5;border-color:#E2C0A6;color:#8A4A22}
+  .chip[data-status="rejected"]{background:#F6E9E8;border-color:#DCB5B3;color:#8C3B39}
+  .chip[data-status="not_done"]{background:#F6E9E8;border-color:#DCB5B3;color:#8C3B39}
+  .chip[data-status="to_be_done"]{background:#F2EFE9;border-color:#DDD6C9;color:#6B6862}
+  .row .txt{flex:1 1 auto;min-width:120px;font-size:13.5px;color:var(--ink)}
+  .row .venue{flex:0 0 150px;font-size:12.5px;color:var(--ink-2)}
+  .row .date{flex:0 0 106px;font-size:12.5px;color:var(--ink-2);font-variant-numeric:tabular-nums}
+  .row .due{flex:0 0 78px;font-size:11.5px;text-align:right}
+  .row .due.soon{color:var(--accent);font-weight:600}
+  .row .due.past{color:var(--bad)}
+  .row .del{flex:0 0 auto;border:0;background:transparent;color:var(--ink-3);cursor:pointer;
+            font-size:15px;line-height:1;padding:3px 6px;border-radius:6px;opacity:0}
+  .row:hover .del{opacity:1}
+  .row .del:hover{background:#F6E9E6;color:var(--bad)}
+  [contenteditable]{outline:0;border-radius:5px;padding:2px 4px;margin:-2px -4px}
+  [contenteditable]:hover{background:#F1EFE9}
+  [contenteditable]:focus{background:#fff;box-shadow:0 0 0 2px var(--accent-line)}
+  [contenteditable]:empty::before{content:"";}
+  [contenteditable]:empty:hover::before,[contenteditable]:empty:focus::before{
+    content:attr(data-ph);color:var(--ink-3)}
+  .addrow{margin-top:8px}
+  .addrow button{border:1px dashed var(--rule);background:transparent;color:var(--ink-3);
+    font:inherit;font-size:12.5px;padding:7px 13px;border-radius:9px;cursor:pointer;width:100%}
+  .addrow button:hover{border-color:var(--accent-line);color:var(--accent);background:var(--accent-soft)}
+  #toast{position:fixed;right:20px;bottom:20px;background:var(--ink);color:#FAF9F6;font-size:12.5px;
+         padding:9px 15px;border-radius:9px;opacity:0;transform:translateY(6px);
+         transition:.18s;pointer-events:none;z-index:60}
+  #toast.on{opacity:1;transform:none}
+  .banner{display:flex;gap:11px;align-items:flex-start;background:var(--accent-soft);
+    border:1px solid var(--accent-line);border-radius:var(--r);padding:13px 16px;margin-bottom:14px;font-size:13px}
+  .banner b{color:var(--accent)}
+  .note{font-size:12px;color:var(--ink-3);margin-top:12px}
+  .trail{list-style:none;margin:0;padding:0}
+  .trail li{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--rule-soft);
+            font-size:13px;min-width:0}
+  .trail li:last-child{border-bottom:0}
+  .trail .t{flex:0 0 52px;color:var(--ink-3);font-size:12px;font-variant-numeric:tabular-nums}
+  .trail .b{flex:1 1 auto;min-width:0;overflow:hidden}
+  .trail-head{font-size:12.5px;font-weight:600;color:var(--ink);margin-bottom:2px}
+  .trail .b .m{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink)}
+  .trail .b .s{font-size:11.5px;color:var(--ink-3)}
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="mark">
+      <svg width="27" height="27" viewBox="0 0 200 200" aria-hidden="true">
+        <g fill="none" stroke="#C15F3C" stroke-width="9" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M66 76 L61 32 L84 50 C92 47 108 47 116 50 L139 32 L134 76
+                   C134 97 118 110 100 110 C82 110 66 97 66 76 Z"/>
+          <path d="M72 104 C58 124 52 146 55 166 C57 177 65 182 77 182
+                   L120 182 C133 182 140 176 138 165 C134 143 128 122 120 104"/>
+          <path d="M137 170 C160 175 175 162 174 145 C173 132 161 126 152 131"/>
+          <path d="M86 75 L86 80 M114 75 L114 80"/>
+        </g>
+      </svg>
+      <div><h1>Catlendar</h1>
+        <div class="daynav">
+          <button id="prevday" title="previous day">&#8249;</button>
+          <span class="date" id="subtitle"></span>
+          <button id="nextday" title="next day">&#8250;</button>
+          <button id="todaybtn" class="todaybtn">today</button>
+        </div>
+      </div>
+    </div>
+    <div class="tabs" role="tablist">
+      <button role="tab" data-scope="day">Today</button>
+      <button role="tab" data-scope="week">Week</button>
+      <button role="tab" data-scope="month">Month</button>
+      <button role="tab" data-scope="pipeline">Pipeline</button>
+    </div>
+  </header>
+  <div id="view"></div>
+  <p class="note" id="footer"></p>
+</div>
+<div id="tip"></div>
+<div id="toast"></div>
+
+<script>
+const D = /*__DATA__*/{};
+const SERIES = ['--s1','--s2','--s3','--s4','--s5','--s6','--s7','--s8'];
+const OTHER = '--s9';
+const SEQ = ['--seq-0','--seq-1','--seq-2','--seq-3','--seq-4','--seq-5','--seq-6'];
+const KIND_COLOR = {research:'--s1', teaching:'--s4', service:'--s6', admin:'--s2', unassigned:'--s9'};
+const SVGNS = 'http://www.w3.org/2000/svg';
+const cssv = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+/* one glyph per kind of work, so a glance at the timeline says what, not just when */
+const ICONS = {
+  code:     'M7 5 3.5 8.5 7 12 M13 5 16.5 8.5 13 12 M11 3.5 9 14',
+  analysis: 'M3.5 14V8 M8 14V4 M12.5 14v-4 M2 16h16',
+  writing:  'M3 15l1-4 8.5-8.5 3 3L7 14l-4 1z M11 4.5l3 3',
+  reading:  'M3 4h6a2 2 0 0 1 2 2v9a2 2 0 0 0-2-2H3z M17 4h-6a2 2 0 0 0-2 2v9a2 2 0 0 1 2-2h6z',
+  comms:    'M2.5 5h15v10h-15z M2.5 5.5 10 11l7.5-5.5',
+  meeting:  'M2.5 5.5h10v9h-10z M12.5 8.5 17.5 6v8l-5-2.5z',
+  admin:    'M3 3.5h5v5H3z M12 3.5h5v5h-5z M3 11.5h5v5H3z M12 11.5h5v5h-5z',
+  personal: 'M4 7h9v4.5a4.5 4.5 0 0 1-9 0z M13 8h2.5a1.8 1.8 0 0 1 0 3.6H13 M4 16.5h9',
+  browsing: 'M10 2.5a7.5 7.5 0 1 0 0 15 7.5 7.5 0 0 0 0-15z M2.5 10h15 M10 2.5c2 2.4 2 12.6 0 15 M10 2.5c-2 2.4-2 12.6 0 15',
+};
+function icon(kind, size, color){
+  const d = ICONS[kind]; if (!d) return null;
+  const g = el('svg',{width:size,height:size,viewBox:'0 0 20 20'});
+  g.appendChild(el('path',{d:d,fill:'none',stroke:color,'stroke-width':1.7,
+                           'stroke-linecap':'round','stroke-linejoin':'round'}));
+  return g;
+}
+
+/* ---------- helpers ---------- */
+function fmt(sec){
+  sec = Math.round(sec||0);
+  const h = Math.floor(sec/3600), m = Math.round((sec%3600)/60);
+  if (h && m) return h+'h '+m+'m';
+  if (h) return h+'h';
+  if (m) return m+'m';
+  return sec>0 ? '<1m' : '0m';
+}
+function clock(ts){
+  const d = new Date(ts*1000); let h = d.getHours();
+  const m = String(d.getMinutes()).padStart(2,'0');
+  const ap = h>=12?'pm':'am'; h = h%12 || 12;
+  return h+':'+m+ap;
+}
+function hourLabel(ts){
+  const d = new Date(ts*1000); let h = d.getHours();
+  const ap = h>=12?'pm':'am'; h = h%12 || 12;
+  return h+ap;
+}
+function el(tag, attrs, text){
+  const n = document.createElementNS(SVGNS, tag);
+  for (const k in (attrs||{})) n.setAttribute(k, attrs[k]);
+  if (text != null) n.textContent = text;
+  return n;
+}
+function h(tag, cls, html){
+  const n = document.createElement(tag);
+  if (cls) n.className = cls;
+  if (html != null) n.innerHTML = html;
+  return n;
+}
+function esc(s){ return String(s==null?'':s).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+function clip(s, n){ s = String(s==null?'':s); return s.length>n ? s.slice(0,n-1)+'…' : s; }
+function colorMap(projects){
+  const m = new Map();
+  projects.forEach((p,i) => m.set(p.key, cssv(i < SERIES.length ? SERIES[i] : OTHER)));
+  return m;
+}
+const tip = document.getElementById('tip');
+function bindTip(node, html){
+  node.addEventListener('mousemove', e => {
+    tip.innerHTML = html; tip.style.opacity = 1;
+    const r = tip.getBoundingClientRect();
+    let x = e.clientX + 14, y = e.clientY + 16;
+    if (x + r.width > innerWidth - 8) x = e.clientX - r.width - 14;
+    if (y + r.height > innerHeight - 8) y = e.clientY - r.height - 14;
+    tip.style.left = x+'px'; tip.style.top = y+'px';
+  });
+  node.addEventListener('mouseleave', () => tip.style.opacity = 0);
+}
+function card(title, caption){
+  const c = h('div','card');
+  c.appendChild(h('h2',null,title));
+  if (caption) c.appendChild(h('p','cap',caption));
+  return c;
+}
+let toastTimer;
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('on');
+  clearTimeout(toastTimer); toastTimer = setTimeout(()=>t.classList.remove('on'), 1600);
+}
+</script>
+
+<script>
+/* ---------- the day, as a live timeline ---------- */
+function dayTimeline(d, cmap){
+  const blocks = d.timeline, events = d.events, now = D.meta.now;
+  if (!blocks.length && !events.length)
+    return h('div','empty', d.total_seconds
+      ? 'Only short bursts so far. A row appears once you stay on something for a minute.'
+      : 'Nothing tracked yet today.');
+
+  const day0 = d.start_ts;
+  /* day0 is the start of the logical day (4am by default). The axis always
+     covers 8am to 2am, the shape of a working day, and stretches further only
+     if you started earlier or ran later than that. */
+  const ends = [].concat(blocks.map(b=>b.end), events.map(e=>e.end), [day0+22*3600]);
+  const starts = [].concat(blocks.map(b=>b.start), events.map(e=>e.start), [day0+4*3600]);
+  const isToday = now >= d.start_ts && now < d.end_ts;
+  if (isToday) { starts.push(now); ends.push(now + 3600); }
+  let lo = Math.floor(Math.min.apply(null, starts)/3600)*3600;
+  let hi = Math.ceil(Math.max.apply(null, ends)/3600)*3600;
+  if (hi - lo < 6*3600) hi = lo + 6*3600;
+
+  const order = d.projects.map(p => p.key);
+  const lanes = order.filter(k => k && blocks.some(b => b.project === k));
+  const hasMeet = events.length > 0;
+  const rowCount = lanes.length + (hasMeet ? 1 : 0);
+
+  const LABEL_W = 178, R = 18, PAD_L = 22, laneH = 28, top = 38;
+  const hours = Math.max(6, (hi - lo)/3600);
+  const avail = Math.max(520, LAYOUT.cardInner - LABEL_W);
+  /* fill the space if the day fits, otherwise give every hour a readable width
+     and let the card scroll */
+  /* subtract the right margin before dividing, so a full 8am-to-2am day lands
+     exactly inside the card instead of overflowing by a few pixels and hiding
+     its last two hours behind a scroll */
+  const PX_PER_HOUR = Math.max(46, (avail - R - PAD_L) / hours);
+  const plotW = Math.max(avail, hours * PX_PER_HOUR + R + PAD_L);
+  const H = top + rowCount*laneH + 14;
+  /* inset the left edge so the first hour label is not sliced in half */
+  const x = t => PAD_L + (t - lo)/(hi - lo) * (plotW - R - PAD_L);
+
+  /* labels live in their own fixed column, so they stay put while the day scrolls */
+  const labels = el('svg',{width:LABEL_W,height:H,viewBox:'0 0 '+LABEL_W+' '+H,class:'axis'});
+  const plot = el('svg',{width:plotW,height:H,viewBox:'0 0 '+plotW+' '+H,class:'axis'});
+
+  for (let t = Math.ceil(lo/3600)*3600; t <= hi; t += 3600){
+    const step = hours > 12 ? 2 : 1;
+    const major = new Date(t*1000).getHours() % step === 0;
+    plot.appendChild(el('line',{x1:x(t),x2:x(t),y1:top-8,y2:H-10,
+      stroke:cssv(major ? '--rule' : '--rule-soft')}));
+    if (major) plot.appendChild(el('text',{x:x(t),y:top-14,'text-anchor':'middle'}, hourLabel(t)));
+  }
+
+  let row = 0;
+  if (hasMeet){
+    labels.appendChild(el('text',{x:0,y:top+18,class:'lane-label'}, 'Meetings'));
+    events.forEach(e => {
+      const w = Math.max(3, x(e.end)-x(e.start));
+      const future = e.start > now;
+      const g = el('g',{});
+      g.appendChild(el('rect',{x:x(e.start),y:top+5,width:w,height:17,rx:5,
+        fill: future ? 'transparent' : cssv('--accent-soft'),
+        stroke: cssv('--accent-line'), 'stroke-width':1.2,
+        'stroke-dasharray': future ? '3 2.5' : 'none', class:'mark-el'}));
+      const room = Math.floor((w-14)/6.1);
+      if (room >= 6) g.appendChild(el('text',{x:x(e.start)+7,y:top+17,
+        class:'bar-lab', style:'fill:'+cssv('--accent')}, clip(e.title, room)));
+      bindTip(g, '<b>'+esc(e.title)+'</b><br><span class="t-k">'+clock(e.start)+' to '+clock(e.end)+
+        ' · '+fmt(e.seconds)+(future ? ' · not yet' : '')+'</span>');
+      plot.appendChild(g);
+    });
+    row++;
+  }
+
+  lanes.forEach(k => {
+    const proj = d.projects.find(p => p.key === k) || {};
+    const label = proj.label || 'Unassigned';
+    const y = top + laneH*row;
+    labels.appendChild(el('rect',{x:0,y:y+9,width:8,height:8,rx:2,fill:cmap.get(k)||cssv(OTHER)}));
+    labels.appendChild(el('text',{x:14,y:y+18,class:'lane-label'}, clip(label, 24)));
+    plot.appendChild(el('line',{x1:PAD_L,x2:plotW-R,y1:y+14,y2:y+14,stroke:cssv('--rule-soft')}));
+    blocks.filter(b => b.project === k).forEach(b => {
+      const w = Math.max(4, x(b.end)-x(b.start)-2);
+      const g = el('g',{class:'mark-el'});
+      g.appendChild(el('rect',{x:x(b.start),y:y+5,width:w,height:17,rx:5,
+                               fill:cmap.get(k)||cssv(OTHER)}));
+      if (w >= 26){
+        const ic = icon(b.activity, 12, '#ffffff');
+        if (ic){ ic.setAttribute('x', x(b.start)+5); ic.setAttribute('y', y+7.5);
+                 ic.setAttribute('opacity','.95'); g.appendChild(ic); }
+      }
+      bindTip(g, '<b>'+esc(label)+'</b><br><span class="t-k">'+clock(b.start)+' to '+clock(b.end)+
+        ' · '+fmt(b.seconds)+' · '+esc(b.activity_label)+'</span>'+
+        (b.title?'<br>'+esc(clip(b.title,64)):''));
+      plot.appendChild(g);
+    });
+    row++;
+  });
+
+  if (isToday && now >= lo && now <= hi){
+    const nx = x(now);
+    plot.appendChild(el('line',{x1:nx,x2:nx,y1:top-10,y2:H-10,stroke:cssv('--accent'),'stroke-width':1.6}));
+    plot.appendChild(el('circle',{cx:nx,cy:top-10,r:3.2,fill:cssv('--accent')}));
+    const st = D.status || {};
+    const text = st.in_meeting ? clip(st.meeting_title||'in a meeting', 26)
+               : (st.state === 'idle' || st.state === 'locked') ? 'away'
+               : clip(st.project_label === 'Unassigned' ? (st.app||'now') : st.project_label, 26);
+    const anchor = nx > plotW - 190 ? 'end' : 'start';
+    plot.appendChild(el('text',{x: nx + (anchor==='end' ? -8 : 8), y: top-26,
+      'text-anchor':anchor, 'font-weight':'600',
+      style:'fill:'+cssv('--accent')+';font-size:11.5px'}, 'now · ' + text));
+  }
+
+  const wrap = h('div','lanes');
+  const labelBox = h('div','lanelabels'); labelBox.appendChild(labels);
+  const scroller = h('div','scrollx'); scroller.appendChild(plot);
+  const focusTs = (isToday && now >= lo && now <= hi) ? now
+                : Math.max.apply(null, blocks.map(b => b.end).concat([lo]));
+  scroller.dataset.focus = String(x(focusTs));   // resolved against the real width on paint
+  wrap.appendChild(labelBox); wrap.appendChild(scroller);
+  return wrap;
+}
+
+/* ---------- research / teaching / service, as one bar ---------- */
+function kindBar(kinds){
+  if (!kinds.length) return h('div','empty','Nothing matched to a project yet.');
+  const total = kinds.reduce((a,k) => a + k.seconds, 0) || 1;
+  const W = 860, H = 30;
+  const svg = el('svg',{width:'100%',viewBox:'0 0 '+W+' '+H,height:H,preserveAspectRatio:'none'});
+  let cx = 0;
+  kinds.forEach(k => {
+    const w = (k.seconds/total)*W;
+    const r = el('rect',{x:cx,y:0,width:Math.max(1,w-2),height:H,rx:5,
+                         fill:cssv(KIND_COLOR[k.key]||OTHER),class:'mark-el'});
+    bindTip(r,'<b>'+esc(k.label)+'</b><br><span class="t-k">'+fmt(k.seconds)+' · '+
+      Math.round(k.share*100)+'% of matched time</span>');
+    svg.appendChild(r);
+    cx += w;
+  });
+  const box = h('div',null); box.appendChild(svg);
+  const lg = h('div','legend');
+  kinds.forEach(k => {
+    const s = document.createElement('span');
+    s.innerHTML = '<i style="background:'+cssv(KIND_COLOR[k.key]||OTHER)+'"></i>'+
+                  esc(k.label)+' <span style="color:var(--ink-3)">'+fmt(k.seconds)+'</span>';
+    lg.appendChild(s);
+  });
+  box.appendChild(lg);
+  return box;
+}
+
+/* ---------- horizontal bars ---------- */
+function hbars(rows, cmap, opts){
+  opts = opts || {};
+  /* keep the intrinsic width near the real column width: the svg scales to fit,
+     and scaling down shrinks the labels with it */
+  const width = opts.width || LAYOUT.col, rowH = 30, pad = 4;
+  const labelW = opts.labelW || 186, valueW = 64;
+  const barW = width - labelW - valueW;
+  const max = Math.max.apply(null, rows.map(r => r.seconds).concat([1]));
+  const svg = el('svg',{width:'100%',viewBox:'0 0 '+width+' '+(rows.length*rowH+pad),
+                        height:rows.length*rowH+pad, preserveAspectRatio:'xMinYMin meet'});
+  rows.forEach((r,i) => {
+    const y = i*rowH + pad;
+    const w = Math.max(3, barW*r.seconds/max);
+    svg.appendChild(el('text',{x:0,y:y+15,class:'bar-lab'}, clip(r.label, opts.chars||25)));
+    const bar = el('rect',{x:labelW,y:y+4,width:w,height:15,rx:4,
+                           fill:(cmap && cmap.get(r.key)) || cssv('--s1'), class:'mark-el'});
+    bindTip(bar,'<b>'+esc(r.label)+'</b><br><span class="t-k">'+fmt(r.seconds)+
+      (r.share!=null ? ' · '+Math.round(r.share*100)+'% of tracked time' : '')+'</span>');
+    svg.appendChild(bar);
+    svg.appendChild(el('text',{x:labelW+w+8,y:y+16,class:'bar-val'}, fmt(r.seconds)));
+  });
+  return svg;
+}
+
+/* ---------- stacked columns ---------- */
+function stackedDays(days, cmap, allProjects){
+  if (!days.length) return h('div','empty','No days in this range yet.');
+  const order = allProjects.map(p => p.key);
+  const ML = 60, MR = 14, top = 26, H = 238, base = H - 32;   // headroom for the top label
+  const minBand = days.length > 20 ? 30 : (days.length > 12 ? 40 : 76);
+  const room = Math.max(520, LAYOUT.cardInner - ML - MR);
+  const band = Math.max(minBand, room / days.length);
+  const W = Math.max(ML + MR + room, ML + MR + days.length*band);
+  const bw = Math.min(118, band - 18);   // grow with the band, so a wide week is not all gaps
+  const max = Math.max.apply(null, days.map(d => d.seconds).concat([3600]));
+  const peak = Math.max.apply(null, days.map(d => d.seconds).concat([0]));
+  const svg = el('svg',{width:W,height:H,viewBox:'0 0 '+W+' '+H,class:'axis'});
+  [0,.5,1].forEach(f => {
+    const y = base - f*(base-top);
+    svg.appendChild(el('line',{x1:ML-8,x2:W-MR,y1:y,y2:y,stroke:cssv('--rule-soft')}));
+    if (f < 1) svg.appendChild(el('text',{x:ML-14,y:y+3,'text-anchor':'end'}, fmt(max*f)));
+  });
+  days.forEach((d,i) => {
+    const cx = ML + i*band + (band-bw)/2;
+    let y = base;
+    d.projects.slice().sort((a,b)=>order.indexOf(a.key)-order.indexOf(b.key)).forEach(p => {
+      const hgt = (p.seconds/max)*(base-top);
+      if (hgt < 0.6) return;
+      y -= hgt;
+      const r = el('rect',{x:cx,y:y,width:bw,height:Math.max(1,hgt-2),rx:3,
+                           fill:cmap.get(p.key)||cssv(OTHER),class:'mark-el'});
+      bindTip(r,'<b>'+esc(p.label)+'</b><br><span class="t-k">'+dlabel(d.date)+' · '+fmt(p.seconds)+'</span>');
+      svg.appendChild(r); y -= 2;
+    });
+    svg.appendChild(el('text',{x:cx+bw/2,y:base+15,'text-anchor':'middle'},
+      band < 40 ? String(Number(d.date.slice(-2))) : dlabel(d.date)));
+    /* With a week or two on screen the column total is exactly what you want to
+       read, so label them all. Across a whole month that would be clutter, so
+       only the busiest day gets a label there. */
+    const labelAll = days.length <= 14;
+    if (d.seconds > 0 && (labelAll || d.seconds === peak))
+      svg.appendChild(el('text',{x:cx+bw/2,
+        y:Math.max(11, base-((d.seconds/max)*(base-top))-7),
+        'text-anchor':'middle',class:'bar-val'}, fmt(d.seconds)));
+    if (d.seconds === 0){
+      const g = el('rect',{x:cx,y:base-3,width:bw,height:3,rx:1.5,fill:cssv('--rule')});
+      bindTip(g,'<b>'+dlabel(d.date)+'</b><br><span class="t-k">nothing tracked</span>');
+      svg.appendChild(g);
+    }
+  });
+  const box = h('div','scrollx'); box.appendChild(svg); return box;
+}
+function dlabel(iso){
+  const [y,m,dd] = iso.split('-').map(Number);
+  const d = new Date(y, m-1, dd);
+  return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()]+' '+dd;
+}
+
+/* ---------- month heatmap ---------- */
+function calHeat(data){
+  const byDate = new Map(data.days.map(d => [d.date, d.seconds]));
+  const start = new Date(data.start_ts*1000);
+  const max = Math.max.apply(null, data.days.map(d => d.seconds).concat([3600]));
+  const cell = 32, gap = 6, W = 7*(cell+gap)+44;
+  const offset = (new Date(start.getFullYear(), start.getMonth(), 1).getDay()+6)%7;
+  const dim = new Date(start.getFullYear(), start.getMonth()+1, 0).getDate();
+  const weeks = Math.ceil((offset+dim)/7);
+  const H = weeks*(cell+gap)+36;
+  const svg = el('svg',{width:W,height:H,viewBox:'0 0 '+W+' '+H,class:'axis'});
+  ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].forEach((d,i) =>
+    svg.appendChild(el('text',{x:22+i*(cell+gap)+cell/2,y:13,'text-anchor':'middle'}, d)));
+  for (let day = 1; day <= dim; day++){
+    const idx = offset+day-1, col = idx%7, rowI = Math.floor(idx/7);
+    const iso = start.getFullYear()+'-'+String(start.getMonth()+1).padStart(2,'0')+'-'+String(day).padStart(2,'0');
+    const sec = byDate.get(iso) || 0;
+    const step = sec === 0 ? 0 : Math.min(SEQ.length-1, 1+Math.floor((sec/max)*(SEQ.length-1.001)));
+    const x0 = 22+col*(cell+gap), y0 = 24+rowI*(cell+gap);
+    const r = el('rect',{x:x0,y:y0,width:cell,height:cell,rx:7,fill:cssv(SEQ[step]),
+                         stroke:cssv(step===0?'--rule':'--rule-soft'),class:'mark-el'});
+    bindTip(r,'<b>'+dlabel(iso)+'</b><br><span class="t-k">'+(sec?fmt(sec)+' tracked':'nothing tracked')+'</span>');
+    svg.appendChild(r);
+    /* inline style, not a fill attribute: the .axis text CSS rule outranks a
+       presentation attribute and would repaint every one of these grey */
+    svg.appendChild(el('text',{x:x0+cell/2,y:y0+cell/2+4,'text-anchor':'middle','font-weight':'600',
+      style:'fill:' + (step===0 ? cssv('--ink-3') : (step>=6 ? '#F2F7F2' : '#13301a')) + ';font-size:11px'},
+      String(day)));
+  }
+  const box = h('div',null); box.appendChild(svg);
+  const lg = h('div','legend');
+  lg.innerHTML = '<span>none</span>' + SEQ.map((s,i) =>
+    '<span><i style="background:'+cssv(s)+';border:1px solid '+cssv(i===0?'--rule':'--rule-soft')+'"></i></span>')
+    .join('') + '<span>busiest '+fmt(max)+'</span>';
+  box.appendChild(lg);
+  return box;
+}
+</script>
+
+<script>
+/* ---------- opening sentence ---------- */
+function lede(d, scope){
+  const top = d.projects.filter(p => p.key)[0];
+  const st = D.status || {};
+  const parts = [];
+  const when = scope==='day'
+    ? (D.meta.is_today ? 'today' : 'on ' + D.meta.range_label.day)
+    : (scope==='week' ? 'this week' : 'this month');
+  if (!d.total_seconds) return h('p','lede','Nothing tracked '+when+' yet. <span class="dim">'+
+    'The cat starts counting as soon as you touch the keyboard.</span>');
+  parts.push('You worked <em>'+fmt(d.total_seconds)+'</em> '+when);
+  if (top) parts.push(', mostly on <em>'+esc(top.label||'unmatched work')+'</em>');
+  parts.push('. ');
+  const bits = [];
+  if (d.meeting_count) bits.push(d.meeting_count+' meeting'+(d.meeting_count>1?'s':'')+' took '+fmt(d.meeting_seconds));
+  if (d.file_count) bits.push(d.file_count+' file'+(d.file_count>1?'s':'')+' changed');
+  if (d.prompt_count) bits.push(d.prompt_count+' question'+(d.prompt_count>1?'s':'')+' to Claude');
+  if (bits.length) parts.push('<span class="dim">'+bits.join(', ')+'.</span>');
+  if (scope==='day' && st.next_meeting)
+    parts.push(' <span class="dim">Next up: '+esc(clip(st.next_meeting,40))+'.</span>');
+  return h('p','lede',parts.join(''));
+}
+
+function tiles(d, scope){
+  const box = h('div','tiles');
+  const add = (cls,k,v,n) => {
+    const t = h('div','tile'+(cls?' '+cls:''));
+    t.appendChild(h('div','k',k)); t.appendChild(h('div','v',v));
+    if (n) t.appendChild(h('div','n',n));
+    box.appendChild(t);
+  };
+  const span = (d.first_ts && d.last_ts && scope==='day') ? clock(d.first_ts)+' to '+clock(d.last_ts) : '';
+  const per = scope==='day' ? '' : fmt(d.total_seconds/Math.max(1,d.active_days))+' a day';
+  add('hero','Time worked', fmt(d.total_seconds),
+      span || (d.active_days+' day'+(d.active_days>1?'s':'')+' · '+per));
+  add('','Deep focus', fmt(d.deep_seconds),
+      d.total_seconds ? Math.round(100*d.deep_seconds/d.total_seconds)+'% in stretches of 30m or more'
+                      : 'stretches of 30m or more');
+  add('','Meetings', fmt(d.meeting_seconds), d.meeting_count+' on the calendar');
+  add('','Longest stretch', fmt(d.longest_block), d.switches+' switches between projects');
+  return box;
+}
+
+function trailCard(d){
+  const c = card('What you actually did',
+    'Your prompts to Claude and the files you saved. This is what tells Catlendar which project you are on when a window title will not.');
+  const g = h('div','grid2');
+
+  const left = h('div',null);
+  left.appendChild(h('div','trail-head','Asked Claude ('+d.prompt_count+')'));
+  const ul = h('ul','trail');
+  (d.prompts||[]).slice(-9).reverse().forEach(p => {
+    const li = document.createElement('li');
+    li.innerHTML = '<span class="t">'+clock(p.ts)+'</span><span class="b">'+
+      '<span class="m">'+esc(p.text)+'</span>'+
+      '<span class="s">'+esc(p.project_label||'unmatched')+'</span></span>';
+    ul.appendChild(li);
+  });
+  if (!(d.prompts||[]).length) ul.appendChild(h('li',null,'<span class="b" style="color:var(--ink-3)">No prompts in this range.</span>'));
+  left.appendChild(ul);
+
+  const right = h('div',null);
+  right.appendChild(h('div','trail-head','Files changed ('+d.file_count+')'));
+  const ul2 = h('ul','trail');
+  (d.files||[]).slice(-9).reverse().forEach(f => {
+    const li = document.createElement('li');
+    li.innerHTML = '<span class="t">'+clock(f.ts)+'</span><span class="b">'+
+      '<span class="m">'+esc(f.name)+'</span>'+
+      '<span class="s">'+esc(f.folder||f.project_label||'')+'</span></span>';
+    ul2.appendChild(li);
+  });
+  if (!(d.files||[]).length) ul2.appendChild(h('li',null,'<span class="b" style="color:var(--ink-3)">No file changes in this range.</span>'));
+  right.appendChild(ul2);
+
+  g.appendChild(left); g.appendChild(right);
+  c.appendChild(g);
+  return c;
+}
+
+function meetingsCard(d){
+  const src = d.calendar_source === 'none' ? 'No calendar connected yet.'
+    : 'From '+(d.calendar_source==='outlook' ? 'Outlook' : 'macOS Calendar')+'.';
+  const c = card('Calendar', src);
+  if (!d.events.length){ c.appendChild(h('div','empty','No meetings in this range.')); return c; }
+  const t = document.createElement('table');
+  t.innerHTML = '<thead><tr><th>When</th><th>Meeting</th><th>Project</th><th style="text-align:right">Length</th></tr></thead>';
+  const tb = document.createElement('tbody');
+  d.events.slice(0,40).forEach(e => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = '<td style="white-space:nowrap">'+clock(e.start)+'</td>'+
+      '<td><span class="truncate">'+esc(e.title)+'</span></td>'+
+      '<td>'+(e.project ? '<span class="pill">'+esc(e.project_label)+'</span>'
+                        : '<span style="color:var(--ink-3)">not matched</span>')+'</td>'+
+      '<td class="num">'+fmt(e.seconds)+'</td>';
+    tb.appendChild(tr);
+  });
+  t.appendChild(tb); c.appendChild(t); return c;
+}
+
+function detailCard(d, cmap){
+  const keys = Object.keys(d.detail||{});
+  const c = card('Window by window', 'The table view of everything above.');
+  if (!keys.length){ c.appendChild(h('div','empty','Nothing recorded yet.')); return c; }
+  const t = document.createElement('table');
+  t.innerHTML = '<thead><tr><th>Project</th><th>Window</th><th style="text-align:right">Time</th></tr></thead>';
+  const tb = document.createElement('tbody');
+  const toKey = new Map(d.projects.map(p => [p.label||'Unassigned', p.key]));
+  keys.forEach(label => {
+    d.detail[label].forEach((row,i) => {
+      const tr = document.createElement('tr');
+      const sw = i===0 ? '<span class="swatch" style="background:'+(cmap.get(toKey.get(label))||cssv(OTHER))+'"></span>' : '';
+      tr.innerHTML = '<td>'+(i===0 ? sw+esc(label) : '')+'</td>'+
+        '<td><span class="truncate">'+esc(row.title)+'</span></td><td class="num">'+fmt(row.seconds)+'</td>';
+      tb.appendChild(tr);
+    });
+  });
+  t.appendChild(tb); c.appendChild(t); return c;
+}
+
+/* ---------- pipeline, editable ---------- */
+const STATUS_ORDER = ['to_be_done','in_prep','under_review','accepted','rejected','done','not_done'];
+const STATUS_TEXT = {to_be_done:'to be done', in_prep:'in prep', under_review:'under review',
+                     accepted:'accepted', rejected:'rejected', done:'done', not_done:'not done'};
+const STATUS_OPEN = ['to_be_done','in_prep','under_review'];
+function nextStatus(cur){
+  const i = STATUS_ORDER.indexOf(cur);
+  return STATUS_ORDER[(i < 0 ? 0 : i + 1) % STATUS_ORDER.length];
+}
+let saveTimer = null;
+
+function bridge(){
+  try { return window.webkit.messageHandlers.catlendar; } catch(e){ return null; }
+}
+function collectPipeline(){
+  const sections = [];
+  document.querySelectorAll('[data-section]').forEach(sec => {
+    const items = [];
+    sec.querySelectorAll('.row').forEach(r => {
+      const text = r.querySelector('.txt').textContent.trim();
+      if (!text) return;
+      items.push({
+        text: text,
+        venue: r.querySelector('.venue').textContent.trim(),
+        date: r.querySelector('.date').textContent.trim(),
+        project: r.dataset.project || '',
+        status: r.querySelector('.chip').dataset.status,
+      });
+    });
+    sections.push({key: sec.dataset.section, label: sec.dataset.label,
+                   note: sec.dataset.note, date_role: sec.dataset.role, items: items});
+  });
+  return {sections: sections};
+}
+function queueSave(){
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    const b = bridge();
+    if (!b){ toast('Open this from the cat to save changes'); return; }
+    b.postMessage({action:'savePipeline', data: collectPipeline()});
+    toast('Saved');
+  }, 500);
+}
+function dueLabel(dateStr, status){
+  if (!dateStr) return ['',''];
+  const t = Date.parse(dateStr+'T00:00:00');
+  if (isNaN(t)) return ['',''];
+  const days = Math.round((t - new Date(new Date().toDateString()).getTime())/86400000);
+  if (STATUS_OPEN.indexOf(status) < 0) return ['',''];
+  if (days < 0) return [Math.abs(days)+'d late','past'];
+  if (days === 0) return ['today','soon'];
+  if (days <= 7) return ['in '+days+'d','soon'];
+  return ['in '+days+'d',''];
+}
+function pipelineRow(item, role){
+  const r = h('div','row');
+  if (item.project) r.dataset.project = item.project;
+  const chip = h('span','chip', STATUS_TEXT[item.status]||'to be done');
+  chip.dataset.status = item.status || 'to_be_done';
+  chip.title = 'click to change';
+  chip.addEventListener('click', () => {
+    const next = nextStatus(chip.dataset.status);
+    chip.dataset.status = next; chip.textContent = STATUS_TEXT[next];
+    refreshDue(r, role); queueSave();
+  });
+  r.appendChild(chip);
+  const mk = (cls, value, ph) => {
+    const n = h('span',cls); n.contentEditable = 'true'; n.textContent = value || '';
+    n.dataset.ph = ph; n.addEventListener('input', () => { refreshDue(r, role); queueSave(); });
+    n.addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); n.blur(); } });
+    return n;
+  };
+  r.appendChild(mk('txt', item.text, 'what'));
+  r.appendChild(mk('venue', item.venue, 'venue'));
+  r.appendChild(mk('date', item.date, 'YYYY-MM-DD'));
+  r.appendChild(h('span','due',''));
+  const del = h('button','del','&times;');
+  del.title = 'remove';
+  del.addEventListener('click', () => { r.remove(); queueSave(); });
+  r.appendChild(del);
+  refreshDue(r, role);
+  return r;
+}
+function refreshDue(row, role){
+  const due = row.querySelector('.due');
+  if (role !== 'deadline'){ due.textContent = ''; due.className = 'due'; return; }
+  const [text, cls] = dueLabel(row.querySelector('.date').textContent.trim(),
+                               row.querySelector('.chip').dataset.status);
+  due.textContent = text; due.className = 'due '+cls;
+}
+function pipelineView(){
+  const p = D.pipeline || {sections:[], counts:{}, upcoming:[], overdue:[]};
+  const view = document.createDocumentFragment();
+
+  const c = p.counts || {};
+  const t = h('div','tiles');
+  [['Under review', c.under_review||0, 'out with a journal'],
+   ['In prep', c.in_prep||0, 'being written'],
+   ['Accepted', c.accepted||0, 'in or accepted'],
+   ['Next 7 days', (p.upcoming||[]).filter(u => u.days <= 7).length, 'dated items']]
+   .forEach(([k,v,n]) => {
+     const tile = h('div','tile');
+     tile.appendChild(h('div','k',k)); tile.appendChild(h('div','v',String(v)));
+     tile.appendChild(h('div','n',n)); t.appendChild(tile);
+   });
+  view.appendChild(t);
+
+  if ((p.overdue||[]).length || (p.upcoming||[]).length){
+    const b = h('div','banner');
+    const bits = [];
+    if ((p.overdue||[]).length)
+      bits.push('<b>'+p.overdue.length+' past its date</b>: '+
+        p.overdue.slice(0,3).map(o => esc(o.text)+' ('+o.date.slice(5)+')').join(', '));
+    if ((p.upcoming||[]).length){
+      const n = p.upcoming[0];
+      bits.push('next is <b>'+esc(n.text)+'</b> on '+n.date.slice(5)+
+        (n.days === 0 ? ', today' : ', in '+n.days+' days'));
+    }
+    b.innerHTML = '<div>'+bits.join('. ')+'.</div>';
+    view.appendChild(b);
+  }
+
+  (p.sections||[]).forEach(sec => {
+    const head = h('div','sec-head');
+    const open = sec.items.filter(i => STATUS_OPEN.indexOf(i.status) >= 0).length;
+    head.innerHTML = '<h3>'+esc(sec.label)+'</h3><span class="note">'+esc(sec.note||'')+'</span>'+
+      '<span class="count">'+open+' open of '+sec.items.length+'</span>';
+    view.appendChild(head);
+    const box = h('div','card');
+    box.style.padding = '8px 10px';
+    box.dataset.section = sec.key; box.dataset.label = sec.label;
+    box.dataset.note = sec.note || ''; box.dataset.role = sec.date_role || 'deadline';
+    sec.items.forEach(item => box.appendChild(pipelineRow(item, sec.date_role)));
+    const add = h('div','addrow');
+    const btn = h('button',null,'+ add to '+esc(sec.label.toLowerCase()));
+    btn.addEventListener('click', () => {
+      const row = pipelineRow({text:'', venue:'', date:'', status:'to_be_done'}, sec.date_role);
+      box.insertBefore(row, add);
+      row.querySelector('.txt').focus();
+    });
+    add.appendChild(btn); box.appendChild(add);
+    view.appendChild(box);
+  });
+  const hint = h('p','note','Click a status chip to cycle it. Click any text to edit it. '+
+    'Changes save straight to pipeline.yaml.');
+  view.appendChild(hint);
+  return view;
+}
+
+/* ---------- the to do list, beside the day ---------- */
+function railCard(){
+  const p = D.pipeline || {sections:[], upcoming:[], overdue:[]};
+  const c = card('To do', 'Everything with a date on it. Click a status to tick it off.');
+  const items = (p.overdue || []).slice().reverse().concat(p.upcoming || []);
+  if (!items.length){
+    c.appendChild(h('div','empty','Nothing dated is open.'));
+    const none = h('button','railmore','Open the full pipeline');
+    none.addEventListener('click', () => render('pipeline'));
+    c.appendChild(none);
+    return c;
+  }
+  const byKey = new Map();
+  (p.sections||[]).forEach(sec => sec.items.forEach(it =>
+    byKey.set(it.text + '|' + (it.date||''), it)));
+
+  items.forEach(it => {
+    const live = byKey.get(it.text + '|' + (it.date||'')) || it;
+    const r = h('div','railrow');
+    const chip = h('span','chip', STATUS_TEXT[live.status] || 'to be done');
+    chip.dataset.status = live.status || 'to_be_done';
+    chip.style.fontSize = '10.5px';
+    chip.title = 'click to change';
+    chip.addEventListener('click', () => {
+      const next = nextStatus(chip.dataset.status);
+      chip.dataset.status = next; chip.textContent = STATUS_TEXT[next];
+      live.status = next;
+      if (STATUS_OPEN.indexOf(next) < 0) r.style.opacity = .5;
+      else r.style.opacity = 1;
+      savePipelineFromData();
+    });
+    r.appendChild(chip);
+    const label = h('span','t');
+    label.textContent = it.text;
+    const short = it.project ? projectShort(it.project) : '';
+    // only tag it when the text does not already say which paper it is
+    if (short && it.text.toLowerCase().indexOf(short.toLowerCase()) !== 0){
+      const tag = document.createElement('span');
+      tag.style.cssText = 'color:var(--ink-3);font-size:11px;margin-left:6px';
+      tag.textContent = short;
+      label.appendChild(tag);
+    }
+    r.appendChild(label);
+    const late = it.days < 0;
+    r.appendChild(h('span','d'+(late ? ' past' : (it.days <= 7 ? ' soon' : '')),
+      late ? Math.abs(it.days)+'d late' : (it.days === 0 ? 'today' : 'in '+it.days+'d')));
+    c.appendChild(r);
+  });
+  const more = h('button','railmore','Open the full pipeline');
+  more.addEventListener('click', () => render('pipeline'));
+  c.appendChild(more);
+  return c;
+}
+function projectShort(key){
+  const all = (D.day && D.day.projects_all) || [];
+  const hit = all.find(p => p.key === key);
+  if (!hit) return '';
+  const m = hit.label.match(/^P\d+/);      // "P3 Long Project Name" -> "P3"
+  return m ? m[0] : clip(hit.label, 14);
+}
+/* ---------- good news ---------- */
+function goodNewsCard(){
+  const c = card('Good news \u{1F389}', 'Anything worth remembering. Click to edit, the button adds one.');
+  const list = h('div',null);
+
+  const row = (item) => {
+    const r = h('div','gnrow');
+    const when = h('span','gndate');
+    when.textContent = item.date ? item.date.slice(5) : '';
+    const txt = h('span','gntext');
+    txt.contentEditable = 'true';
+    txt.textContent = item.text || '';
+    txt.dataset.ph = 'what happened';
+    txt.dataset.date = item.date || todayISO();
+    txt.addEventListener('input', queueGoodNews);
+    txt.addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); txt.blur(); } });
+    const del = h('button','del','&times;');
+    del.title = 'remove';
+    del.addEventListener('click', () => { r.remove(); queueGoodNews(); });
+    r.appendChild(when); r.appendChild(txt); r.appendChild(del);
+    return r;
+  };
+
+  (D.goodnews || []).forEach(item => list.appendChild(row(item)));
+  if (!(D.goodnews || []).length)
+    list.appendChild(h('div','empty','Nothing yet. Something will turn up.'));
+  c.appendChild(list);
+
+  const add = h('div','addrow');
+  const btn = h('button',null,'\u{1F389} add good news');
+  btn.addEventListener('click', () => {
+    const blank = list.querySelector('.empty');
+    if (blank) blank.remove();
+    const r = row({text:'', date: todayISO()});
+    list.insertBefore(r, list.firstChild);
+    r.querySelector('.gntext').focus();
+  });
+  add.appendChild(btn); c.appendChild(add);
+  return c;
+}
+function todayISO(){
+  const d = new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+let goodTimer;
+function queueGoodNews(){
+  clearTimeout(goodTimer);
+  goodTimer = setTimeout(() => {
+    const items = [];
+    document.querySelectorAll('.gntext').forEach(el => {
+      const text = el.textContent.trim();
+      if (text) items.push({text: text, date: el.dataset.date || todayISO()});
+    });
+    const b = bridge();
+    if (!b){ toast('Open this from the cat to save changes'); return; }
+    b.postMessage({action:'saveGoodNews', items: items});
+    toast('Saved');
+  }, 600);
+}
+
+function savePipelineFromData(){
+  const p = D.pipeline;
+  if (!p) return;
+  const payload = {sections: p.sections.map(sec => ({
+    key: sec.key, label: sec.label, note: sec.note, date_role: sec.date_role,
+    items: sec.items.map(i => ({text:i.text, venue:i.venue, date:i.date,
+                                project:i.project||'', status:i.status}))
+  }))};
+  const b = bridge();
+  if (!b){ toast('Open this from the cat to save changes'); return; }
+  b.postMessage({action:'savePipeline', data: payload});
+  toast('Saved');
+}
+
+/* ---------- time you add by hand ---------- */
+function hhmm(ts){
+  const d = new Date(ts*1000);
+  return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+}
+function manualCard(d){
+  const c = card('Add your own time',
+    'For anything the Mac could not see: reading on paper, a phone call, a whiteboard. '+
+    '"also" adds it alongside what was detected, "instead" makes those ten minutes count only as this.');
+  const box = h('div',null);
+  const mk = (entry) => {
+    const r = h('div','mrow');
+    const from = document.createElement('input'); from.type = 'time'; from.value = hhmm(entry.start);
+    const to = document.createElement('input'); to.type = 'time'; to.value = hhmm(entry.end);
+    const sel = document.createElement('select');
+    (D.day.projects_all||[]).forEach(p => {
+      const o = document.createElement('option');
+      o.value = p.key; o.textContent = p.label;
+      if (p.key === entry.project) o.selected = true;
+      sel.appendChild(o);
+    });
+    const mode = h('span','mode', entry.mode === 'only' ? 'instead' : 'also');
+    mode.dataset.mode = entry.mode || 'add';
+    mode.addEventListener('click', () => {
+      const next = mode.dataset.mode === 'only' ? 'add' : 'only';
+      mode.dataset.mode = next; mode.textContent = next === 'only' ? 'instead' : 'also';
+      queueManual();
+    });
+    const del = h('button','del','&times;');
+    del.style.opacity = 1;
+    del.addEventListener('click', () => { r.remove(); queueManual(); });
+    [from, to, sel].forEach(el => el.addEventListener('change', queueManual));
+    r.appendChild(from); r.appendChild(h('span','d','to')); r.appendChild(to);
+    r.appendChild(sel); r.appendChild(mode); r.appendChild(del);
+    return r;
+  };
+  (d.manual||[]).forEach(entry => box.appendChild(mk(entry)));
+  c.appendChild(box);
+  const add = h('div','addrow');
+  const btn = h('button',null,'+ add a stretch of time');
+  btn.addEventListener('click', () => {
+    const now = new Date();
+    const round = (n) => String(Math.floor(n/10)*10).padStart(2,'0');
+    const startH = String(now.getHours()).padStart(2,'0')+':'+round(now.getMinutes());
+    const entry = {start: d.start_ts, end: d.start_ts, project: (D.day.projects_all[0]||{}).key, mode:'add'};
+    const row = mk(entry);
+    row.querySelector('input[type=time]').value = startH;
+    row.querySelectorAll('input[type=time]')[1].value =
+      String(Math.min(23, now.getHours()+1)).padStart(2,'0')+':'+round(now.getMinutes());
+    box.appendChild(row);
+    queueManual();
+  });
+  add.appendChild(btn); c.appendChild(add);
+  return c;
+}
+let manualTimer;
+function queueManual(){
+  clearTimeout(manualTimer);
+  manualTimer = setTimeout(() => {
+    const rows = [];
+    document.querySelectorAll('.mrow').forEach(r => {
+      const times = r.querySelectorAll('input[type=time]');
+      const sel = r.querySelector('select');
+      if (!times[0].value || !times[1].value) return;
+      const toTs = (v) => {
+        const [H,M] = v.split(':').map(Number);
+        return D.day.start_ts + H*3600 + M*60;
+      };
+      let a = toTs(times[0].value), b = toTs(times[1].value);
+      if (b <= a) b = a + 600;
+      rows.push({start_ts:a, end_ts:b, project:sel.value, note:'',
+                 mode:r.querySelector('.mode').dataset.mode});
+    });
+    const bh = bridge();
+    if (!bh){ toast('Open this from the cat to save changes'); return; }
+    bh.postMessage({action:'saveManual', day_start: D.day.start_ts,
+                    day_end: D.day.end_ts, rows: rows});
+    toast('Saved. Reopen to see it counted.');
+  }, 600);
+}
+
+/* ---------- how much room have we got ---------- */
+let LAYOUT = {main: 1000, col: 500, cardInner: 960};
+function measure(scope){
+  const v = document.getElementById('view');
+  const total = (v && v.clientWidth) || (innerWidth - 68);
+  const railed = (scope === 'day') && total > 1040;
+  const main = railed ? total - 338 : total;
+  LAYOUT = {
+    total: total,
+    main: main,
+    cardInner: Math.max(320, main - 42),
+    col: Math.max(300, Math.floor((main - 14) / 2) - 42),
+  };
+  return LAYOUT;
+}
+
+/* ---------- render ---------- */
+function render(scope){
+  const view = document.getElementById('view');
+  view.innerHTML = '';
+  measure(scope);
+  document.querySelectorAll('.tabs button').forEach(b =>
+    b.setAttribute('aria-selected', String(b.dataset.scope === scope)));
+  const br = bridge(); if (br) br.postMessage({action:'scope', scope: scope});
+
+  if (scope === 'pipeline'){
+    document.getElementById('subtitle').textContent = 'Submissions and deadlines';
+    wireDayNav('pipeline');
+    view.appendChild(pipelineView());
+  } else {
+    const d = D[scope];
+    const cmap = colorMap(d.projects);
+    document.getElementById('subtitle').textContent = D.meta.range_label[scope];
+    view.appendChild(lede(d, scope));
+
+    if (scope === 'day'){
+      const grid = h('div','daygrid');
+      const main = h('div',null);
+      const c = card(D.meta.is_today ? 'Your day so far' : 'That day, hour by hour',
+        D.meta.is_today
+          ? 'One row per project. A bar shows when you were on it, the line marks right now, '+
+            'and a dashed box is a meeting still ahead of you.'
+          : 'One row per project. A bar shows when you were on it.');
+      c.appendChild(dayTimeline(d, cmap));
+      main.appendChild(c);
+      main.appendChild(tiles(d, scope));
+      if (d.total_seconds > 0)
+        main.appendChild(h('p','overlap','Counted in ten minute slots. A slot counts when you '+
+          'were at the keyboard, when Claude was working, or during a meeting. If two projects '+
+          'shared a slot they get half each, so the numbers below add up to '+fmt(d.total_seconds)+
+          ' and no more.'));
+      const rail = h('aside','rail');
+      rail.appendChild(railCard());
+      rail.appendChild(goodNewsCard());
+      grid.appendChild(main); grid.appendChild(rail);
+      view.appendChild(grid);
+      view.dataset.mainCol = '1';
+      var target = main;
+    } else {
+      const c = card(scope==='week' ? 'Each day this week' : 'Each day this month',
+        'Stacked by project. The tallest column is your longest day.');
+      c.appendChild(stackedDays(d.days, cmap, d.projects));
+      const lg = h('div','legend');
+      const shown = d.projects.slice(0,8);
+      const unmatched = d.projects.find(p => !p.key);
+      if (unmatched && shown.indexOf(unmatched) < 0) shown.push(unmatched);
+      shown.forEach(p => {
+        const s = document.createElement('span');
+        s.innerHTML = '<i style="background:'+(cmap.get(p.key)||cssv(OTHER))+'"></i>'+esc(p.label||'Unmatched');
+        lg.appendChild(s);
+      });
+      c.appendChild(lg);
+      view.appendChild(c);
+      view.appendChild(tiles(d, scope));
+      var target = view;
+    }
+
+    const kc = card('Research, teaching or service',
+      'Every matched minute, sorted into the kind of work it was.');
+    kc.appendChild(kindBar(d.kinds||[]));
+    target.appendChild(kc);
+
+    if (scope === 'month'){
+      const c = card('Month at a glance', 'Deeper green means a longer day. Grey means nothing tracked.');
+      c.appendChild(calHeat(d));
+      target.appendChild(c);
+    }
+
+    const g = h('div','grid2');
+    const pc = card('Where the time went', 'Projects, longest first. Slots you shared are split, not doubled.');
+    if (d.projects.length)
+      pc.appendChild(hbars(d.projects.slice(0,10).map(p =>
+        ({key:p.key,label:p.label||'Unmatched',seconds:p.seconds,share:p.share})), cmap,
+        {chars:30}));
+    else pc.appendChild(h('div','empty','No tracked time yet.'));
+    const ac = card('What kind of work', 'From the app and the window title.');
+    if (d.activities.length){
+      const amap = new Map(d.activities.map((a,i) => [a.key, cssv(i<SERIES.length?SERIES[i]:OTHER)]));
+      ac.appendChild(hbars(d.activities.map(a =>
+        ({key:a.key,label:a.label||'Other',seconds:a.seconds,share:a.share})), amap,
+        {labelW:172, chars:24}));
+    } else ac.appendChild(h('div','empty','No tracked time yet.'));
+    g.appendChild(pc); g.appendChild(ac);
+    target.appendChild(g);
+
+    if (scope === 'day') target.appendChild(manualCard(d));
+    target.appendChild(trailCard(d));
+    target.appendChild(meetingsCard(d));
+    target.appendChild(detailCard(d, cmap));
+  }
+
+  requestAnimationFrame(() => {
+    document.querySelectorAll('.scrollx[data-focus]').forEach(el => {
+      // put the focus point about two thirds across, so you see what you just
+      // did with a little of what is coming
+      el.scrollLeft = Math.max(0, Number(el.dataset.focus) - el.clientWidth * 0.66);
+    });
+  });
+  const sync = D.meta.last_sync ? 'calendar synced '+D.meta.last_sync : 'calendar not connected';
+  document.getElementById('footer').textContent =
+    'Built '+D.meta.generated+' · '+sync+' · everything here is read from this Mac and stays on it.';
+}
+
+/* ---------- walking back through the days ---------- */
+function shiftDate(days){
+  const [y,m,d] = (D.meta.date || todayISO()).split('-').map(Number);
+  const dt = new Date(y, m-1, d);
+  dt.setDate(dt.getDate() + days);
+  return dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0');
+}
+function goToDate(iso){
+  const b = bridge();
+  if (!b){ toast('Open this from the cat to browse other days'); return; }
+  b.postMessage({action:'showDate', date: iso});
+}
+function wireDayNav(scope){
+  const nav = document.querySelector('.daynav');
+  const prev = document.getElementById('prevday');
+  const next = document.getElementById('nextday');
+  const today = document.getElementById('todaybtn');
+  const dayView = scope === 'day';
+  prev.hidden = next.hidden = !dayView;
+  if (!dayView){ today.hidden = true; return; }
+  prev.disabled = (D.meta.date <= (D.meta.earliest || D.meta.date));
+  next.disabled = !!D.meta.is_today;
+  today.hidden = !!D.meta.is_today;
+  prev.onclick = () => { if (!prev.disabled) goToDate(shiftDate(-1)); };
+  next.onclick = () => { if (!next.disabled) goToDate(shiftDate(1)); };
+  today.onclick = () => goToDate(todayISO());
+}
+
+document.querySelectorAll('.tabs button').forEach(b =>
+  b.addEventListener('click', () => render(b.dataset.scope)));
+render(new URLSearchParams(location.search).get('scope') || (D.meta && D.meta.initial_scope) || 'day');
+</script>

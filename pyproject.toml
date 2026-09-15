@@ -1,0 +1,31 @@
+[project]
+name = "catlendar"
+version = "0.1.0"
+description = "A local time tracker that works out what you are working on, with a cat on your desktop"
+readme = "README.md"
+requires-python = ">=3.9"
+license = {text = "MIT"}
+dependencies = ["PyYAML>=6.0"]
+
+[project.optional-dependencies]
+macos = [
+  "pyobjc-core>=10.0",
+  "pyobjc-framework-Cocoa>=10.0",
+  "pyobjc-framework-Quartz>=10.0",
+  "pyobjc-framework-WebKit>=10.0",
+  "pyobjc-framework-EventKit>=10.0",
+  "pyobjc-framework-ApplicationServices>=10.0",
+]
+
+[project.scripts]
+catlendar = "catlendar.__main__:main"
+
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["catlendar"]
+
+[tool.setuptools.package-data]
+catlendar = []

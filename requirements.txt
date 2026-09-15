@@ -1,0 +1,13 @@
+# Core, every platform
+PyYAML>=6.0
+
+# macOS only: the menu bar app, the desktop cat, window titles and the calendar.
+# pip installs these on macOS and skips them elsewhere.
+pyobjc-core>=10.0 ; sys_platform == "darwin"
+pyobjc-framework-Cocoa>=10.0 ; sys_platform == "darwin"
+pyobjc-framework-Quartz>=10.0 ; sys_platform == "darwin"
+pyobjc-framework-WebKit>=10.0 ; sys_platform == "darwin"
+pyobjc-framework-EventKit>=10.0 ; sys_platform == "darwin"
+pyobjc-framework-ApplicationServices>=10.0 ; sys_platform == "darwin"
+
+# Windows needs nothing extra: it talks to user32 and kernel32 through ctypes.
