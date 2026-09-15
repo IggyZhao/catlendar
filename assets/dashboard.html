@@ -194,6 +194,12 @@
   .row .due{flex:0 0 78px;font-size:11.5px;text-align:right}
   .row .due.soon{color:var(--accent);font-weight:600}
   .row .due.past{color:var(--bad)}
+  .row .grip{flex:0 0 auto;color:var(--ink-3);cursor:grab;font-size:13px;
+             opacity:0;user-select:none;padding:0 2px;letter-spacing:-2px}
+  .row:hover .grip{opacity:.7}
+  .row .grip:active{cursor:grabbing}
+  .row.dragging{opacity:.45}
+  .row.over{box-shadow:inset 0 2px 0 var(--accent)}
   .row .del{flex:0 0 auto;border:0;background:transparent;color:var(--ink-3);cursor:pointer;
             font-size:15px;line-height:1;padding:3px 6px;border-radius:6px;opacity:0}
   .row:hover .del{opacity:1}
@@ -783,7 +789,10 @@ function queueSave(){
   saveTimer = setTimeout(() => {
     const b = bridge();
     if (!b){ toast('Open this from the cat to save changes'); return; }
-    b.postMessage({action:'savePipeline', data: collectPipeline()});
+    const payload = collectPipeline();
+    b.postMessage({action:'savePipeline', data: payload});
+    D.pipeline.sections = payload.sections;   // keep the rail honest
+    recomputePipeline();
     toast('Saved');
   }, 500);
 }
@@ -818,15 +827,74 @@ function pipelineRow(item, role){
   };
   r.appendChild(mk('txt', item.text, 'what'));
   r.appendChild(mk('venue', item.venue, 'venue'));
-  r.appendChild(mk('date', item.date, 'YYYY-MM-DD'));
+  const dateField = mk('date', item.date, 'YYYYMMDD');
+  dateField.addEventListener('blur', () => {
+    const tidy = normaliseDate(dateField.textContent);
+    if (tidy !== dateField.textContent){
+      dateField.textContent = tidy;
+      refreshDue(r, role);
+      queueSave();
+    }
+  });
+  r.appendChild(dateField);
   r.appendChild(h('span','due',''));
   const del = h('button','del','&times;');
   del.title = 'remove';
   del.addEventListener('click', () => { r.remove(); queueSave(); });
   r.appendChild(del);
+  attachDrag(r, role);
   refreshDue(r, role);
   return r;
 }
+
+/* A grip rather than a draggable row: the row is full of editable text, and
+   making the whole thing draggable stops you selecting any of it. */
+function attachDrag(row, role){
+  const grip = h('span','grip','\u283F');
+  grip.title = 'drag to reorder';
+  grip.addEventListener('mousedown', () => { row.draggable = true; });
+  grip.addEventListener('mouseup', () => { row.draggable = false; });
+  row.insertBefore(grip, row.firstChild);
+
+  row.addEventListener('dragstart', e => {
+    row.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+    try { e.dataTransfer.setData('text/plain', ''); } catch (err) {}
+  });
+  row.addEventListener('dragend', () => {
+    row.classList.remove('dragging');
+    row.draggable = false;
+    document.querySelectorAll('.row.over').forEach(el => el.classList.remove('over'));
+    queueSave();
+  });
+  row.addEventListener('dragover', e => {
+    const moving = document.querySelector('.row.dragging');
+    if (!moving || moving === row) return;
+    if (moving.parentElement !== row.parentElement) return;   // stay in the section
+    e.preventDefault();
+    row.classList.add('over');
+    const box = row.getBoundingClientRect();
+    const after = (e.clientY - box.top) > box.height / 2;
+    row.parentElement.insertBefore(moving, after ? row.nextSibling : row);
+  });
+  row.addEventListener('dragleave', () => row.classList.remove('over'));
+  row.addEventListener('drop', e => { e.preventDefault(); row.classList.remove('over'); });
+}
+/* 20261007 and 2026/10/07 both mean 2026-10-07. Nobody should have to type
+   the dashes. A bare 1007 means that day in the current year. */
+function normaliseDate(raw){
+  const text = String(raw || '').trim();
+  if (!text) return '';
+  const digits = text.replace(/\D/g, '');
+  if (digits.length === 8)
+    return digits.slice(0,4)+'-'+digits.slice(4,6)+'-'+digits.slice(6,8);
+  if (digits.length === 6)            // YYMMDD
+    return '20'+digits.slice(0,2)+'-'+digits.slice(2,4)+'-'+digits.slice(4,6);
+  if (digits.length === 4)            // MMDD this year
+    return new Date().getFullYear()+'-'+digits.slice(0,2)+'-'+digits.slice(2,4);
+  return text;
+}
+
 function refreshDue(row, role){
   const due = row.querySelector('.due');
   if (role !== 'deadline'){ due.textContent = ''; due.className = 'due'; return; }
@@ -1081,6 +1149,41 @@ window.catAnswer = function(payload){
   });
 };
 
+/* The rail reads D.pipeline, which Python built when the page was rendered.
+   Editing the pipeline writes to disk but leaves that copy stale, so the To do
+   list looked frozen. Recompute it in place after every save. */
+const OPEN = ['to_be_done','in_prep','under_review'];
+function recomputePipeline(){
+  const p = D.pipeline;
+  if (!p) return;
+  const today = new Date(new Date().toDateString()).getTime();
+  const counts = {}, upcoming = [], overdue = [];
+  (p.sections || []).forEach(sec => {
+    (sec.items || []).forEach(it => {
+      counts[it.status] = (counts[it.status] || 0) + 1;
+      if (!it.date || (sec.date_role || 'deadline') !== 'deadline') return;
+      const when = Date.parse(it.date + 'T00:00:00');
+      if (isNaN(when)) return;
+      const days = Math.round((when - today) / 86400000);
+      const row = Object.assign({}, it, {section: sec.label, days: days});
+      if (OPEN.indexOf(it.status) >= 0 && days >= 0) upcoming.push(row);
+      else if ((OPEN.indexOf(it.status) >= 0 || it.status === 'not_done') && days < 0) overdue.push(row);
+    });
+  });
+  upcoming.sort((a,b) => a.date < b.date ? -1 : 1);
+  overdue.sort((a,b) => a.date > b.date ? -1 : 1);
+  p.counts = counts;
+  p.upcoming = upcoming.slice(0,8);
+  p.overdue = overdue.slice(0,6);
+}
+function refreshRail(){
+  recomputePipeline();
+  const rail = document.querySelector('.rail');
+  if (!rail) return;
+  const old = rail.firstElementChild;
+  if (old) rail.replaceChild(railCard(), old);
+}
+
 function savePipelineFromData(){
   const p = D.pipeline;
   if (!p) return;
@@ -1092,6 +1195,7 @@ function savePipelineFromData(){
   const b = bridge();
   if (!b){ toast('Open this from the cat to save changes'); return; }
   b.postMessage({action:'savePipeline', data: payload});
+  refreshRail();
   toast('Saved');
 }
 
