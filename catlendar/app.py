@@ -15,7 +15,7 @@ from AppKit import (
 from Foundation import NSObject, NSTimer
 from PyObjCTools import AppHelper
 
-from . import calsync, config, dashboard, db, goodnews, pipeline, report, sources, tracker, ui
+from . import calsync, chat, config, dashboard, db, goodnews, pipeline, report, sources, tracker, ui
 from .paths import ASSETS_DIR, DATA_DIR, LOG_DIR, REPORT_DIR
 
 LOG_PATH = os.path.join(LOG_DIR, "catlendar.log")
@@ -372,6 +372,16 @@ class CatlendarDelegate(NSObject):
             log.info("pipeline saved (%d sections)", count)
             if self._finished_count() > before and self.pet is not None:
                 self.pet.move("celebrate")        # something got ticked off
+        elif action == "chat":
+            question = str(body.get("message") or "").strip()
+            if question:
+                threading.Thread(target=self._answer, args=(question,), daemon=True).start()
+        elif action == "chatApply":
+            proposal = body.get("proposal") or {}
+            ok, detail = chat.apply_action(proposal)
+            log.info("chat action %s: %s %s", proposal.get("action"), ok, detail)
+            if ok and self.pet is not None and proposal.get("action") == "add_good_news":
+                self.pet.move("celebrate")
         elif action == "saveGoodNews":
             before = len(goodnews.load())
             count = goodnews.save(body.get("items") or [])
@@ -482,6 +492,26 @@ class CatlendarDelegate(NSObject):
                 if not tracker.accessibility_trusted()
                 else "x-apple.systempreferences:com.apple.preference.security?Privacy_Calendars")
         subprocess.Popen(["open", pane])
+
+    @objc.python_method
+    def _answer(self, question):
+        """Off the main thread: the model takes seconds, the UI must not freeze."""
+        try:
+            result = chat.ask(question)
+        except Exception as exc:
+            log.exception("chat failed")
+            result = {"reply": str(exc)[:200], "actions": [], "error": True}
+        result["describe"] = [chat.describe(a) for a in result.get("actions", [])]
+        AppHelper.callAfter(self._deliver_answer, result)
+
+    @objc.python_method
+    def _deliver_answer(self, result):
+        if self.dashboard_window is None:
+            return
+        import json as _json
+        js = "window.catAnswer && window.catAnswer({});".format(
+            _json.dumps(result, ensure_ascii=False))
+        self.dashboard_window.web.evaluateJavaScript_completionHandler_(js, None)
 
     @objc.python_method
     def _finished_count(self):

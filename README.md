@@ -190,6 +190,35 @@ The one exception is the **five minute meeting warning**: for that the cat lifts
 above every window, turns orange and counts down, then drops back to the desktop.
 A warning you cannot see is not a warning.
 
+## Asking it things
+
+There is an **Ask** box beside your day. It answers questions about your own
+tracked time, and can propose changes.
+
+```
+how long on the grant this week?
+which day was my longest?
+add 40 minutes to the thesis from 2pm
+mark the peer review as done
+```
+
+It never makes a change on its own. When you ask for one it proposes it, the
+dashboard shows a **do it** button, and nothing happens until you click. It can
+add time, add good news, add a to do, and change an item's status. It cannot
+touch your real calendar.
+
+It needs a model, and looks for one in this order:
+
+1. The [`claude`](https://claude.com/claude-code) command line tool, if it is
+   installed and signed in. Nothing to configure. If it has been a while, run
+   `claude` once in a terminal to sign in again.
+2. `ANTHROPIC_API_KEY` in your environment, which uses the API directly.
+
+Only the summary numbers go to the model: totals per project, your open items,
+the day's meetings by title. Window titles, file names and prompt text stay on
+your machine. If no model is set up the box says so and everything else works as
+before.
+
 ## Privacy
 
 Window titles can contain anything, so:
