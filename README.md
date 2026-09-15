@@ -6,6 +6,14 @@ on your desktop while it does.
 Everything stays on your machine. There is no account, no server, and nothing
 leaves the computer.
 
+<p align="center">
+  <img src="docs/cat-demo.gif" alt="The cat working, focusing, in a meeting, alerting before one, asleep, and celebrating" width="254">
+</p>
+
+![The Today view](docs/screenshot-day.png)
+
+*Every screenshot here is generated from invented data. See `scripts/demo_data.py`.*
+
 ## What makes it different
 
 Most trackers ask you to start and stop a timer, or they log app names and leave
@@ -88,6 +96,18 @@ Windows needs no extra packages: it reads the foreground window and the idle
 timer through `user32` and `kernel32` with `ctypes`. Calendar reading is macOS
 only for now, so meetings will be missing.
 
+## Try it without waiting
+
+To see the dashboard before you have any data of your own:
+
+```bash
+CATLENDAR_DATA_DIR=/tmp/catlendar-demo python scripts/demo_data.py
+CATLENDAR_DATA_DIR=/tmp/catlendar-demo python -m catlendar report
+```
+
+That writes a month of invented work to a throwaway folder and opens it. It
+refuses to touch your real data folder.
+
 ## Teaching it your projects
 
 Open `projects.yaml` in your data folder (see below) and set `project_roots` to
@@ -126,6 +146,10 @@ start, so `review` does not fire inside `Preview`.
 ## The dashboard
 
 Click the cat, or run `python -m catlendar report`.
+
+![The week view](docs/screenshot-week.png)
+
+![The pipeline](docs/screenshot-pipeline.png)
 
 - **Today**: a timeline with one row per project, a line marking now, dashed boxes
   for meetings still ahead, and arrows to walk back through any earlier day.
