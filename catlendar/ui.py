@@ -274,6 +274,49 @@ class DashboardWindow(NSObject):
         return bool(self.window.isVisible())
 
 
+def install_edit_menu():
+    """Without a main menu carrying the standard Edit items, macOS never routes
+    command C, V, X, A or Z to a text field. An accessory app has no menu bar of
+    its own, so build one: the items are invisible but the shortcuts work."""
+    from AppKit import NSApplication, NSEventModifierFlagShift
+
+    main = NSMenu.alloc().init()
+
+    app_item = NSMenuItem.alloc().init()
+    main.addItem_(app_item)
+    app_menu = NSMenu.alloc().init()
+    quit_item = NSMenuItem.alloc().initWithTitle_action_keyEquivalent_(
+        "Quit Catlendar", "terminate:", "q")
+    app_menu.addItem_(quit_item)
+    app_item.setSubmenu_(app_menu)
+
+    edit_item = NSMenuItem.alloc().init()
+    main.addItem_(edit_item)
+    edit_menu = NSMenu.alloc().initWithTitle_("Edit")
+    for title, selector, key in (
+        ("Undo", "undo:", "z"),
+        ("Redo", "redo:", "Z"),
+        (None, None, None),
+        ("Cut", "cut:", "x"),
+        ("Copy", "copy:", "c"),
+        ("Paste", "paste:", "v"),
+        ("Select All", "selectAll:", "a"),
+    ):
+        if title is None:
+            edit_menu.addItem_(NSMenuItem.separatorItem())
+            continue
+        item = NSMenuItem.alloc().initWithTitle_action_keyEquivalent_(title, selector, key.lower())
+        if key.isupper():
+            item.setKeyEquivalentModifierMask_(
+                item.keyEquivalentModifierMask() | NSEventModifierFlagShift)
+        item.setTarget_(None)          # let it travel the responder chain
+        edit_menu.addItem_(item)
+    edit_item.setSubmenu_(edit_menu)
+
+    NSApplication.sharedApplication().setMainMenu_(main)
+    return main
+
+
 def menu_item(title, target, action, key="", enabled=True):
     item = NSMenuItem.alloc().initWithTitle_action_keyEquivalent_(title, action, key)
     item.setTarget_(target)

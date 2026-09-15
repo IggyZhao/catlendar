@@ -1193,7 +1193,9 @@ function measure(scope){
 }
 
 /* ---------- render ---------- */
+let CURRENT_SCOPE = 'day';
 function render(scope){
+  CURRENT_SCOPE = scope;
   const view = document.getElementById('view');
   view.innerHTML = '';
   measure(scope);
@@ -1327,6 +1329,16 @@ function wireDayNav(scope){
   next.onclick = () => { if (!next.disabled) goToDate(shiftDate(1)); };
   today.onclick = () => goToDate(todayISO());
 }
+
+/* Charts size themselves to the container when they are built, so widening the
+   window has to rebuild them or they stay at the old width. */
+let resizeTimer, lastWidth = window.innerWidth;
+window.addEventListener('resize', () => {
+  if (Math.abs(window.innerWidth - lastWidth) < 12) return;
+  lastWidth = window.innerWidth;
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => render(CURRENT_SCOPE), 160);
+});
 
 document.querySelectorAll('.tabs button').forEach(b =>
   b.addEventListener('click', () => render(b.dataset.scope)));

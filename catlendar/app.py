@@ -55,6 +55,14 @@ class CatlendarDelegate(NSObject):
     def applicationDidFinishLaunching_(self, notification):
         db.init()
         config.ensure_user_config()
+        menu = ui.install_edit_menu()   # so copy and paste work in the dashboard
+        try:
+            edit = menu.itemAtIndex_(1).submenu()
+            keys = [edit.itemAtIndex_(i).keyEquivalent() for i in range(edit.numberOfItems())]
+            log.info("edit menu installed with shortcuts: %s",
+                     [k for k in keys if k])
+        except Exception:
+            log.exception("edit menu check failed")
 
         self.status_item = NSStatusBar.systemStatusBar().statusItemWithLength_(
             NSVariableStatusItemLength)
