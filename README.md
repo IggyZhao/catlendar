@@ -46,6 +46,11 @@ Time is counted in **ten minute slots**, and the rules are deliberately strict:
   than starting a new day. Configurable.
 - **Nothing in the future counts.** A meeting on Thursday is on the calendar, not
   on the clock.
+- **A block you put in your own calendar is not a meeting.** An event with no
+  other attendees can say which project a slot belongs to, but it cannot claim
+  the time: a six hour writing block is an intention, not evidence that you did
+  it. If you did, your keyboard and your Claude sessions already prove it.
+  `blocks_that_count` lists the exceptions, such as a class you teach.
 
 ## Install
 

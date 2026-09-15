@@ -201,10 +201,17 @@ def summarize(start_ts, end_ts, scope="day"):
             mark(slot, sig["project"], "claude")
 
     # --- presence: meetings and anything you added by hand ---
-    meetings_count = bool(config.setting("count_meetings_as_work"))
+    # An event with other people in it is a meeting: you are there, usually away
+    # from the keyboard, so it counts as presence. An event with nobody else is a
+    # block you put in your own calendar, which is an intention, not evidence. It
+    # can still say which project a slot belongs to, but it cannot claim the time.
+    threshold = int(config.setting("meeting_min_attendees"))
+    counts_as_work = bool(config.setting("count_meetings_as_work"))
     for ev in events:
+        real_meeting = (ev["attendees"] or 0) >= threshold
         for slot in span_slots(ev["start_ts"], ev["end_ts"]):
-            mark(slot, ev["project"], "meeting", presence=meetings_count)
+            mark(slot, ev["project"], "meeting" if real_meeting else None,
+                 presence=real_meeting and counts_as_work)
     for m in manual:
         for slot in span_slots(m["start_ts"], m["end_ts"]):
             mark(slot, m["project"], "manual")
@@ -311,9 +318,13 @@ def summarize(start_ts, end_ts, scope="day"):
         "claude_seconds": claude_seconds,
         "active_days": n_days,
         "meeting_seconds": sum(max(0, min(e["end_ts"], horizon) - max(e["start_ts"], start_ts))
-                               for e in events),
-        "meeting_count": sum(1 for e in events if e["start_ts"] < horizon),
-        "meetings_ahead": sum(1 for e in events if e["start_ts"] >= horizon),
+                               for e in events if _is_meeting(e)),
+        "meeting_count": sum(1 for e in events
+                             if _is_meeting(e) and e["start_ts"] < horizon),
+        "meetings_ahead": sum(1 for e in events
+                              if _is_meeting(e) and e["start_ts"] >= horizon),
+        "blocked_seconds": sum(max(0, min(e["end_ts"], horizon) - max(e["start_ts"], start_ts))
+                               for e in events if not _is_meeting(e)),
         "deep_seconds": sum(r for r in active_runs if r >= 1800),
         "focus_seconds": sum(r for r in active_runs if r >= 900),
         "longest_block": max(active_runs, default=0),
@@ -335,6 +346,7 @@ def summarize(start_ts, end_ts, scope="day"):
         },
         "events": [{
             "title": e["title"], "start": e["start_ts"], "end": e["end_ts"],
+            "is_meeting": _is_meeting(e),
             "calendar": e["calendar"], "attendees": e["attendees"],
             "project": e["project"], "project_label": config.project_label(e["project"]),
             "seconds": max(0, e["end_ts"] - e["start_ts"]),
@@ -362,6 +374,20 @@ def summarize(start_ts, end_ts, scope="day"):
         "projects_all": [{"key": p["key"], "label": p["label"], "kind": p["kind"]}
                          for p in config.load()["projects"]],
     }
+
+
+def _is_meeting(event):
+    """Other people in it, so you were actually somewhere.
+
+    Teaching a class is the exception that proves the rule: nobody is an
+    attendee, but you are certainly not at your desk. `blocks_that_count` lists
+    titles that count as being somewhere even with no attendees.
+    """
+    if (event.get("attendees") or 0) >= int(config.setting("meeting_min_attendees")):
+        return True
+    title = str(event.get("title") or "").lower()
+    return any(str(word).lower() in title
+               for word in (config.setting("blocks_that_count") or []))
 
 
 def _active_runs(slots, start_ts):

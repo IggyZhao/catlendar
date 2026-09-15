@@ -13,7 +13,13 @@ settings:
   calendar_sync_minutes: 10       # how often to re-read the calendar (macOS)
   meeting_grace_minutes: 5        # count time this far outside an event as in it
   day_start_hour: 4               # a day runs 4am to 4am, so 1am counts as last night
-  count_meetings_as_work: true    # a calendar meeting counts even with no input
+  count_meetings_as_work: true    # a real meeting counts even with no input
+  # An event with nobody else in it is a block you put in your own calendar, not
+  # a meeting. It can say which project a slot belongs to, but it cannot claim
+  # the time: a six hour writing block is an intention, not evidence.
+  meeting_min_attendees: 2
+  # Except these. A class has no attendees but you are still not at your desk.
+  blocks_that_count: ["lecture", "seminar", "office hours"]
   hide_when_fullscreen: true      # step aside for slideshows
   cat_layer: desktop              # desktop: any window covers the cat. floating: always on top
   raise_for_meeting_alert: true   # but lift it above everything for the 5 minute warning

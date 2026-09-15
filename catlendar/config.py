@@ -21,6 +21,8 @@ DEFAULTS = {
     "cat_layer": "desktop",     # desktop: windows cover it. floating: always on top
     "raise_for_meeting_alert": True,   # lift it above windows for the 5 minute warning
     "count_meetings_as_work": True,
+    "meeting_min_attendees": 2,   # fewer than this is a block you made, not a meeting
+    "blocks_that_count": [],      # solo events that are still time away from the desk
     "meeting_grace_minutes": 5,
 }
 
