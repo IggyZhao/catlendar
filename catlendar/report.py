@@ -235,8 +235,9 @@ def summarize(start_ts, end_ts, scope="day"):
         share = SLOT / len(projects)
         for project in projects:
             by_project[project] += share
-            if project:
-                by_day[day_key][project] += share
+            # unmatched time belongs in the day's stack too, otherwise the bar
+            # is shorter than the total printed above it
+            by_day[day_key][project] += share
         for activity in slot_acts.get(slot, ()):
             by_activity[activity] += SLOT
         for app in slot_apps.get(slot, ()):
