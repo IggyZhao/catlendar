@@ -186,6 +186,10 @@ see your desktop, and never over what you are presenting. If you would rather it
 floated above everything, there is "Keep cat on top" in its menu, or set
 `cat_layer: floating`.
 
+The one exception is the **five minute meeting warning**: for that the cat lifts
+above every window, turns orange and counts down, then drops back to the desktop.
+A warning you cannot see is not a warning.
+
 ## Privacy
 
 Window titles can contain anything, so:

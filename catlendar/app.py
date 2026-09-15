@@ -49,6 +49,7 @@ class CatlendarDelegate(NSObject):
         self.dashboard_date = None      # None means today
         self._auto_hidden = False       # hidden by us for a full screen app
         self._hotkey_monitor = None
+        self._raised = False            # lifted above the windows for a meeting alert
         return self
 
     def applicationDidFinishLaunching_(self, notification):
@@ -228,6 +229,7 @@ class CatlendarDelegate(NSObject):
         night = hour >= 23 or hour < int(config.setting("day_start_hour"))
         if self.pet is not None:
             self.pet.update(state, main, sub, night)
+            self.raise_for_alert(state == "soon")
         title = " paused" if state == "paused" else " " + report.fmt_hm(status["today_seconds"])
         self.status_item.button().setTitle_(title)
         self.status = status
@@ -238,6 +240,24 @@ class CatlendarDelegate(NSObject):
                 and self.dashboard_scope != "pipeline"
                 and (time.time() - getattr(self, "_last_build", 0)) > 120):
             self.rebuild_dashboard(show=False, why="tick")
+
+    @objc.python_method
+    def raise_for_alert(self, alerting):
+        """A meeting warning is no use behind a window. Lift the cat above
+        everything while it is counting down, then put it back where it lives.
+        A cat you hid yourself stays hidden: that was a deliberate choice."""
+        if self.pet is None or not config.setting("raise_for_meeting_alert"):
+            return
+        if db.get_meta("pet_hidden", "0") == "1":
+            return
+        if alerting and not self._raised:
+            self.pet.set_layer("floating")
+            self.pet.show()
+            self._raised = True
+            log.info("cat raised for a meeting starting soon")
+        elif not alerting and self._raised:
+            self.pet.set_layer(str(config.setting("cat_layer")))
+            self._raised = False
 
     # ------------------------------------------------------------------- menu
     def menuNeedsUpdate_(self, menu):
@@ -427,6 +447,7 @@ class CatlendarDelegate(NSObject):
         """Desktop: every window covers it. Floating: it sits above them."""
         layer = "floating" if config.setting("cat_layer") == "desktop" else "desktop"
         config.set_setting("cat_layer", layer)
+        self._raised = False
         if self.pet is not None:
             self.pet.set_layer(layer)
             self.pet.show()

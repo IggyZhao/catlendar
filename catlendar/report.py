@@ -406,7 +406,10 @@ def current_status():
     for e in db.events_between(now - 300, now + 3600):
         if e["all_day"]:
             continue
-        if e["start_ts"] - 300 <= now <= e["end_ts"]:
+        # strictly started: a five minute grace here would mask the "starting
+        # soon" alert, since a meeting about to begin would already read as one
+        # you are in
+        if e["start_ts"] <= now <= e["end_ts"]:
             ev = e
             break
     next_ev = None

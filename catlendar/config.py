@@ -19,6 +19,7 @@ DEFAULTS = {
     "asleep_after_minutes": 5,
     "hide_when_fullscreen": True,
     "cat_layer": "desktop",     # desktop: windows cover it. floating: always on top
+    "raise_for_meeting_alert": True,   # lift it above windows for the 5 minute warning
     "count_meetings_as_work": True,
     "meeting_grace_minutes": 5,
 }
