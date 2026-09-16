@@ -213,14 +213,17 @@ def summarize(start_ts, end_ts, scope="day"):
             mark(slot, ev["project"], "meeting" if real_meeting else None,
                  presence=real_meeting and counts_as_work)
     removals = []
-    for m in manual:
+    later_adds = []           # (id, project, slots) so a removal cannot undo an
+    for m in manual:          # entry that was written after it
         if m["mode"] == "remove":
-            removals.append(m)        # applied last, so an edit always wins
+            removals.append(m)
             continue
-        for slot in span_slots(m["start_ts"], m["end_ts"]):
+        slots = list(span_slots(m["start_ts"], m["end_ts"]))
+        later_adds.append((m.get("id") or 0, m["project"], set(slots)))
+        for slot in slots:
             mark(slot, m["project"], "manual")
         if m["mode"] == "only":
-            for slot in span_slots(m["start_ts"], m["end_ts"]):
+            for slot in slots:
                 only_slots[slot] = m["project"]
 
     # --- not presence: a saved file proves a project, not that you were there.
@@ -235,9 +238,20 @@ def summarize(start_ts, end_ts, scope="day"):
     # Shortening or deleting a block drops that project from those slots. The
     # slot itself stays on the clock: you were still at the keyboard, the time
     # simply stops counting towards this project.
+    #
+    # Shortening is written as a removal of the old range followed by the new,
+    # shorter one, so the two overlap. A removal must therefore leave alone any
+    # slot that an entry written after it has claimed, or shortening a block
+    # would delete it outright.
     for m in removals:
+        rid = m.get("id") or 0
+        kept = set()
+        for add_id, project, slots in later_adds:
+            if add_id > rid and project == m["project"]:
+                kept |= slots
         for slot in span_slots(m["start_ts"], m["end_ts"]):
-            slot_projects[slot].discard(m["project"])
+            if slot not in kept:
+                slot_projects[slot].discard(m["project"])
 
     # ---- roll the slots up
     by_project, by_activity, by_app, by_hour = Counter(), Counter(), Counter(), Counter()

@@ -147,7 +147,8 @@ def signals_between(start_ts, end_ts, kinds=None):
 def manual_between(start_ts, end_ts):
     with cursor() as conn:
         return [dict(r) for r in conn.execute(
-            "SELECT * FROM manual WHERE end_ts > ? AND start_ts < ? ORDER BY start_ts",
+            # insertion order, so a later edit wins over an earlier one
+            "SELECT * FROM manual WHERE end_ts > ? AND start_ts < ? ORDER BY id",
             (int(start_ts), int(end_ts)))]
 
 
