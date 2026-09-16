@@ -9,7 +9,8 @@ import Quartz
 from AppKit import (
     NSApp, NSBackingStoreBuffered, NSColor, NSEvent, NSImage, NSMakeRect, NSMenu,
     NSMenuItem, NSScreen, NSView, NSWindow, NSWindowCollectionBehaviorCanJoinAllSpaces,
-    NSWindowCollectionBehaviorFullScreenAuxiliary, NSWindowCollectionBehaviorStationary,
+    NSWindowCollectionBehaviorFullScreenAuxiliary, NSWindowCollectionBehaviorMoveToActiveSpace,
+    NSWindowCollectionBehaviorStationary,
     NSWindowStyleMaskBorderless, NSWindowStyleMaskClosable, NSWindowStyleMaskMiniaturizable,
     NSWindowStyleMaskResizable, NSWindowStyleMaskTitled, NSFloatingWindowLevel,
 )
@@ -234,6 +235,10 @@ class DashboardWindow(NSObject):
         win.setTitle_(title)
         win.setReleasedWhenClosed_(False)
         win.setMinSize_((880, 560))
+        # Follow whoever opens it. Left to itself the window stays on the space
+        # it was first opened on, where isVisible keeps answering yes and the
+        # cat looks broken: you click it, and nothing happens on your screen.
+        win.setCollectionBehavior_(NSWindowCollectionBehaviorMoveToActiveSpace)
         win.setBackgroundColor_(NSColor.colorWithSRGBRed_green_blue_alpha_(0.055, 0.055, 0.075, 1.0))
         conf = WKWebViewConfiguration.alloc().init()
         self.bridge = None
@@ -266,8 +271,14 @@ class DashboardWindow(NSObject):
 
     @objc.python_method
     def show(self):
+        # A window that was minimised or left on another space answers yes to
+        # isVisible while being nowhere you can see, so put it back in front
+        # rather than trusting that.
+        if self.window.isMiniaturized():
+            self.window.deminiaturize_(None)
         NSApp.activateIgnoringOtherApps_(True)
         self.window.makeKeyAndOrderFront_(None)
+        self.window.orderFrontRegardless()
 
     @objc.python_method
     def visible(self):
