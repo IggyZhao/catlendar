@@ -230,6 +230,7 @@ def summarize(start_ts, end_ts, scope="day"):
 
     # ---- roll the slots up
     by_project, by_activity, by_app, by_hour = Counter(), Counter(), Counter(), Counter()
+    present = Counter()      # wall time a project appears in, overlaps and all
     by_day = defaultdict(Counter)
     for slot in sorted(slot_active):
         when = dt.datetime.fromtimestamp(start_ts + slot * SLOT)
@@ -242,6 +243,7 @@ def summarize(start_ts, end_ts, scope="day"):
         share = SLOT / len(projects)
         for project in projects:
             by_project[project] += share
+            present[project] += SLOT
             # unmatched time belongs in the day's stack too, otherwise the bar
             # is shorter than the total printed above it
             by_day[day_key][project] += share
@@ -273,6 +275,7 @@ def summarize(start_ts, end_ts, scope="day"):
     by_project = Counter({k: int(round(v)) for k, v in by_project.items()})
     by_kind = Counter({k: int(round(v)) for k, v in by_kind.items()})
     by_activity = Counter({k: int(round(v)) for k, v in by_activity.items()})
+    present = Counter({k: int(round(v)) for k, v in present.items()})
     by_app = Counter({k: int(round(v)) for k, v in by_app.items()})
     by_day = {d: Counter({k: int(round(v)) for k, v in c.items()}) for d, c in by_day.items()}
 
@@ -342,9 +345,9 @@ def summarize(start_ts, end_ts, scope="day"):
         "switches": max(0, len(timeline) - 1),
         "first_ts": start_ts + min(slot_active) * SLOT if slot_active else None,
         "last_ts": start_ts + (max(slot_active) + 1) * SLOT if slot_active else None,
-        "projects": rows(Counter({k: v for k, v in by_project.items() if k}), config.project_label)
-                    + ([{"key": None, "label": "Unmatched", "seconds": unmatched,
-                         "share": (unmatched / total) if total else 0.0}] if unmatched else []),
+        "projects": _project_rows(by_project, present, total),
+        "project_basis": str(config.setting("project_time")),
+        "present_total": sum(v for k, v in present.items() if k),
         "activities": rows(by_activity, _activity_label),
         "apps": [{"label": k or "Unknown", "seconds": v} for k, v in by_app.most_common(12)],
         "hours": [{"hour": h, "seconds": by_hour.get(h, 0)} for h in range(24)],
@@ -384,6 +387,33 @@ def summarize(start_ts, end_ts, scope="day"):
         "projects_all": [{"key": p["key"], "label": p["label"], "kind": p["kind"]}
                          for p in config.load()["projects"]],
     }
+
+
+def _project_rows(by_project, present, total):
+    """Two honest answers, and the setting picks which one the bar shows.
+
+    "present" is the wall time a project appears in. Ask "how long was I on
+    this" and that is the answer, but shared slots mean the parts overlap and
+    add up to more than the clock.
+
+    "share" divides every shared slot between the projects in it, so the parts
+    add up to the clock exactly and no minute is counted twice.
+    """
+    basis = str(config.setting("project_time"))
+    rows = []
+    for key in set(by_project) | set(present):
+        split = int(round(by_project.get(key, 0)))
+        seen = int(round(present.get(key, 0)))
+        rows.append({
+            "key": key,
+            "label": config.project_label(key) if key else "Unmatched",
+            "seconds": seen if basis == "present" else split,
+            "present_seconds": seen,
+            "share_seconds": split,
+            "share": (seen if basis == "present" else split) / total if total else 0.0,
+        })
+    rows.sort(key=lambda r: -r["seconds"])
+    return [r for r in rows if r["seconds"] > 0]
 
 
 def _is_meeting(event):
@@ -482,7 +512,9 @@ def current_status():
 
 def fmt_hm(seconds):
     seconds = int(seconds or 0)
-    h, m = seconds // 3600, (seconds % 3600) // 60
+    h, m = seconds // 3600, round((seconds % 3600) / 60)
+    if m == 60:                 # rounding can push minutes to sixty, carry it
+        h, m = h + 1, 0
     if h and m:
         return "{}h {}m".format(h, m)
     if h:

@@ -300,7 +300,8 @@ function icon(kind, size, color){
 /* ---------- helpers ---------- */
 function fmt(sec){
   sec = Math.round(sec||0);
-  const h = Math.floor(sec/3600), m = Math.round((sec%3600)/60);
+  let h = Math.floor(sec/3600), m = Math.round((sec%3600)/60);
+  if (m === 60){ h += 1; m = 0; }     // carry, so nothing reads "1h 60m"
   if (h && m) return h+'h '+m+'m';
   if (h) return h+'h';
   if (m) return m+'m';
@@ -529,8 +530,12 @@ function hbars(rows, cmap, opts){
     svg.appendChild(el('text',{x:0,y:y+15,class:'bar-lab'}, clip(r.label, opts.chars||25)));
     const bar = el('rect',{x:labelW,y:y+4,width:w,height:15,rx:4,
                            fill:(cmap && cmap.get(r.key)) || cssv('--s1'), class:'mark-el'});
-    bindTip(bar,'<b>'+esc(r.label)+'</b><br><span class="t-k">'+fmt(r.seconds)+
-      (r.share!=null ? ' · '+Math.round(r.share*100)+'% of tracked time' : '')+'</span>');
+    let tip = '<b>'+esc(r.label)+'</b><br><span class="t-k">'+fmt(r.seconds);
+    if (r.present_seconds != null && r.share_seconds != null && r.present_seconds !== r.share_seconds)
+      tip += '<br>'+fmt(r.present_seconds)+' on it, '+fmt(r.share_seconds)+
+             ' once shared slots are divided';
+    else if (r.share != null) tip += ' · '+Math.round(r.share*100)+'% of tracked time';
+    bindTip(bar, tip + '</span>');
     svg.appendChild(bar);
     svg.appendChild(el('text',{x:labelW+w+8,y:y+16,class:'bar-val'}, fmt(r.seconds)));
   });
@@ -1330,9 +1335,8 @@ function render(scope){
       main.appendChild(tiles(d, scope));
       if (d.total_seconds > 0)
         main.appendChild(h('p','overlap','Counted in ten minute slots. A slot counts when you '+
-          'were at the keyboard, when Claude was working, or during a meeting. If two projects '+
-          'shared a slot they get half each, so the numbers below add up to '+fmt(d.total_seconds)+
-          ' and no more.'));
+          'were at the keyboard, when Claude was working, or during a meeting. '+
+          fmt(d.total_seconds)+' is the clock: every slot once, however many things were in it.'));
       const rail = h('aside','rail');
       rail.appendChild(railCard());
       rail.appendChild(goodNewsCard());
@@ -1343,7 +1347,8 @@ function render(scope){
       var target = main;
     } else {
       const c = card(scope==='week' ? 'Each day this week' : 'Each day this month',
-        'Stacked by project. The tallest column is your longest day.');
+        'Stacked by project, shared slots divided, so each column matches the day above it. '+
+        'The tallest is your longest day.');
       c.appendChild(stackedDays(d.days, cmap, d.projects));
       const lg = h('div','legend');
       const shown = d.projects.slice(0,8);
@@ -1372,7 +1377,11 @@ function render(scope){
     }
 
     const g = h('div','grid2');
-    const pc = card('Where the time went', 'Projects, longest first. Slots you shared are split, not doubled.');
+    const present = d.project_basis !== 'share';
+    const pc = card('Where the time went', present
+      ? 'How long you were on each. A slot shared by two projects counts for both, so these '+
+        'add up to '+fmt(d.present_total)+', more than the '+fmt(d.total_seconds)+' on the clock.'
+      : 'Projects, longest first. A shared slot is divided, so these add up to the clock exactly.');
     if (d.projects.length)
       pc.appendChild(hbars(d.projects.slice(0,10).map(p =>
         ({key:p.key,label:p.label||'Unmatched',seconds:p.seconds,share:p.share})), cmap,

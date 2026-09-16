@@ -13,6 +13,13 @@ settings:
   calendar_sync_minutes: 10       # how often to re-read the calendar (macOS)
   meeting_grace_minutes: 5        # count time this far outside an event as in it
   day_start_hour: 4               # a day runs 4am to 4am, so 1am counts as last night
+  # How a project's own number is worked out.
+  #   present - the wall time you were on it. Two projects in one ten minute
+  #             slot each show ten minutes, so the parts add up to more than
+  #             the clock. This answers "how long was I on this".
+  #   share   - a shared slot is divided between them, so the parts add up to
+  #             the clock exactly and no minute is counted twice.
+  project_time: present
   count_meetings_as_work: true    # a real meeting counts even with no input
   # An event with nobody else in it is a block you put in your own calendar, not
   # a meeting. It can say which project a slot belongs to, but it cannot claim
