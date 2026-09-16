@@ -245,10 +245,19 @@ def summarize(start_ts, end_ts, scope="day"):
             # unmatched time belongs in the day's stack too, otherwise the bar
             # is shorter than the total printed above it
             by_day[day_key][project] += share
-        for activity in slot_acts.get(slot, ()):
-            by_activity[activity] += SLOT
-        for app in slot_apps.get(slot, ()):
-            by_app[app] += SLOT
+        # Same rule as projects: a slot is shared, never counted twice. Source
+        # markers are left out of the split as well as the chart, so they cannot
+        # quietly take a share of the time away from the real answer.
+        acts = slot_acts.get(slot, set()) - SOURCE_MARKERS
+        if acts:
+            act_share = SLOT / len(acts)
+            for activity in acts:
+                by_activity[activity] += act_share
+        apps = slot_apps.get(slot, set())
+        if apps:
+            app_share = SLOT / len(apps)
+            for app in apps:
+                by_app[app] += app_share
 
     total = len(slot_active) * SLOT
     attributed = sum(v for k, v in by_project.items() if k)
@@ -263,6 +272,8 @@ def summarize(start_ts, end_ts, scope="day"):
     # whole seconds once the sharing is done
     by_project = Counter({k: int(round(v)) for k, v in by_project.items()})
     by_kind = Counter({k: int(round(v)) for k, v in by_kind.items()})
+    by_activity = Counter({k: int(round(v)) for k, v in by_activity.items()})
+    by_app = Counter({k: int(round(v)) for k, v in by_app.items()})
     by_day = {d: Counter({k: int(round(v)) for k, v in c.items()}) for d, c in by_day.items()}
 
     # ---- contiguous runs per project, for the timeline
@@ -334,8 +345,7 @@ def summarize(start_ts, end_ts, scope="day"):
         "projects": rows(Counter({k: v for k, v in by_project.items() if k}), config.project_label)
                     + ([{"key": None, "label": "Unmatched", "seconds": unmatched,
                          "share": (unmatched / total) if total else 0.0}] if unmatched else []),
-        "activities": rows(Counter({k: v for k, v in by_activity.items()
-                                    if k not in SOURCE_MARKERS}), _activity_label),
+        "activities": rows(by_activity, _activity_label),
         "apps": [{"label": k or "Unknown", "seconds": v} for k, v in by_app.most_common(12)],
         "hours": [{"hour": h, "seconds": by_hour.get(h, 0)} for h in range(24)],
         "days": _day_series(by_day, start_ts, end_ts, scope),
