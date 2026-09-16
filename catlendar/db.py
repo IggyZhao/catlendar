@@ -219,3 +219,96 @@ def samples_between(start_ts, end_ts):
                 (int(start_ts), int(end_ts)),
             )
         ]
+
+# ---------------------------------------------------------------- housekeeping
+SLOT = 600
+
+
+def compact_samples(before_ts, slot=SLOT):
+    """Roll old samples up to one row per slot per distinct activity.
+
+    Every number the reports show is bucketed into ten minute slots, so
+    collapsing the sixty raw samples inside one old slot into one row per
+    distinct (app, title, project, activity, state) changes no total. What it
+    drops is the second by second ordering inside a slot on an old day, which
+    only makes that day's timeline blockier. Recent days are left alone.
+    """
+    before = int(before_ts)
+    with connect() as conn:
+        rows = conn.execute(
+            "SELECT MIN(ts) AS ts, SUM(dur) AS dur, app, bundle_id, title, "
+            "       project, activity, state, COUNT(*) AS n "
+            "FROM samples WHERE ts < ? "
+            "GROUP BY ts / ?, app, bundle_id, title, project, activity, state",
+            (before, int(slot)),
+        ).fetchall()
+        if not rows:
+            return 0, 0
+        was = conn.execute(
+            "SELECT COUNT(*) FROM samples WHERE ts < ?", (before,)
+        ).fetchone()[0]
+        if was <= len(rows):
+            return was, was
+        conn.execute("DELETE FROM samples WHERE ts < ?", (before,))
+        conn.executemany(
+            "INSERT INTO samples (ts, dur, app, bundle_id, title, project, "
+            "activity, state) VALUES (?,?,?,?,?,?,?,?)",
+            [
+                (r["ts"], r["dur"], r["app"], r["bundle_id"], r["title"],
+                 r["project"], r["activity"], r["state"])
+                for r in rows
+            ],
+        )
+    return was, len(rows)
+
+
+def drop_before(cutoff_ts):
+    """Forget everything older than the cutoff. Only runs when history_days is
+    set; the default keeps every day you have ever tracked."""
+    cutoff = int(cutoff_ts)
+    with connect() as conn:
+        n = conn.execute("DELETE FROM samples WHERE ts < ?", (cutoff,)).rowcount
+        n += conn.execute("DELETE FROM signals WHERE ts < ?", (cutoff,)).rowcount
+        n += conn.execute("DELETE FROM events WHERE end_ts < ?", (cutoff,)).rowcount
+    return n
+
+
+def vacuum():
+    conn = sqlite3.connect(DB_PATH, timeout=60, isolation_level=None)
+    try:
+        conn.execute("VACUUM")
+    finally:
+        conn.close()
+
+
+def footprint():
+    import os
+    total = 0
+    for suffix in ("", "-wal", "-shm"):
+        try:
+            total += os.path.getsize(DB_PATH + suffix)
+        except OSError:
+            pass
+    with cursor() as conn:
+        counts = {
+            t: conn.execute("SELECT COUNT(*) FROM " + t).fetchone()[0]
+            for t in ("samples", "signals", "events", "manual")
+        }
+    return {"bytes": total, "rows": counts}
+
+
+def maintain(compact_after_days=3, history_days=0, verbose=False):
+    """Daily housekeeping. Cheap, safe to run at any time."""
+    now = int(time.time())
+    before, after = compact_samples(now - int(compact_after_days) * 86400)
+    dropped = 0
+    if int(history_days) > 0:
+        dropped = drop_before(now - int(history_days) * 86400)
+    freed = (before - after) + dropped
+    if freed > 20000:
+        vacuum()
+    result = {"compacted_from": before, "compacted_to": after,
+              "dropped": dropped, "vacuumed": freed > 20000}
+    if verbose:
+        print(result)
+    return result

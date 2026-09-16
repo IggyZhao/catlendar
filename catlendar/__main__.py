@@ -110,6 +110,34 @@ def cmd_app(args):
     app.main()
 
 
+def cmd_tidy(args):
+    """Roll old days up and report what the database costs on disk."""
+    from . import db
+    db.init()
+    before = db.footprint()["bytes"]
+    r = db.maintain(compact_after_days=config.setting("compact_after_days"),
+                    history_days=config.setting("history_days"))
+    after = db.footprint()["bytes"]
+    print("samples {:,} -> {:,}, dropped {:,}".format(
+        r["compacted_from"], r["compacted_to"], r["dropped"]))
+    print("database {:.2f} MB -> {:.2f} MB".format(before / 1e6, after / 1e6))
+    return 0
+
+
+def cmd_footprint(args):
+    from . import db
+    db.init()
+    f = db.footprint()
+    print("database  : {:.2f} MB".format(f["bytes"] / 1e6))
+    for table, n in f["rows"].items():
+        print("  {:9} {:>9,} rows".format(table, n))
+    keep = config.setting("history_days")
+    print("keeping   : {}, full detail for {} days".format(
+        "everything" if not int(keep) else "{} days".format(keep),
+        config.setting("compact_after_days")))
+    return 0
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(prog="catlendar", description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -127,6 +155,8 @@ def main(argv=None):
     subs.add_parser("scan", help="rebuild the project list").set_defaults(func=cmd_scan)
     subs.add_parser("status", help="what it knows so far").set_defaults(func=cmd_status)
     subs.add_parser("app", help="menu bar app and desktop cat (macOS)").set_defaults(func=cmd_app)
+    subs.add_parser("footprint", help="how much disk this is using").set_defaults(func=cmd_footprint)
+    subs.add_parser("tidy", help="roll old days up and reclaim space").set_defaults(func=cmd_tidy)
 
     args = parser.parse_args(argv)
     if not getattr(args, "func", None):

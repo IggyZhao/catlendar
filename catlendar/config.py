@@ -13,6 +13,11 @@ _cache = {"mtime": 0.0, "cfg": None}
 
 DEFAULTS = {
     "sample_interval_seconds": 10,
+    # Housekeeping. Days newer than compact_after_days keep full resolution;
+    # older ones are rolled up to the ten minute slots the reports use anyway.
+    # history_days 0 means keep everything (about 50 MB a year after roll-up).
+    "compact_after_days": 3,
+    "history_days": 0,
     "idle_after_seconds": 150,
     "calendar_sync_minutes": 10,
     "day_start_hour": 4,

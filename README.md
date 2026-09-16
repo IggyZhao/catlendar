@@ -247,9 +247,34 @@ Your data lives in one folder, and nothing else reads it:
 - Windows `%APPDATA%\Catlendar\`
 - Linux `~/.local/share/catlendar/`
 
-It holds `catlendar.db` (about a megabyte a month), your `projects.yaml`,
-`pipeline.yaml` and `goodnews.yaml`, and logs. Delete the folder and Catlendar
-forgets everything.
+It holds `catlendar.db`, your `projects.yaml`, `pipeline.yaml` and
+`goodnews.yaml`, and logs. Delete the folder and Catlendar forgets everything.
+
+### Disk space
+
+Sampling every ten seconds would write about a megabyte a day and never stop.
+It does not, because every number the dashboard shows is counted in ten minute
+slots, so keeping sixty separate rows inside one old slot buys nothing. Days
+older than `compact_after_days` are rolled up to one row per slot per app and
+window, which is roughly seven times smaller and leaves every total, project,
+activity and app figure identical. The only thing lost is the second by second
+ordering inside a slot on an old day, which makes an old timeline slightly
+blockier. Expect around 50 MB a year.
+
+This runs itself once a day. To look, or to do it now:
+
+```bash
+python -m catlendar footprint
+python -m catlendar tidy
+```
+
+```yaml
+settings:
+  compact_after_days: 3    # days kept at full resolution
+  history_days: 0          # 0 keeps everything; 365 forgets older days
+```
+
+Logs rotate at a megabyte and keep two old files.
 
 ## Layout
 

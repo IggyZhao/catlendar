@@ -110,12 +110,34 @@ class CatlendarDelegate(NSObject):
         # cat to get out of the way when a slideshow starts
         self.screen_timer = NSTimer.scheduledTimerWithTimeInterval_target_selector_userInfo_repeats_(
             3.0, self, "checkFullScreen:", None, True)
+        self.start_housekeeping()
         self.install_hotkey()
         self.request_permissions_if_needed()
         self.tick_(None)
         if os.environ.get("CATLENDAR_TEST_OPEN") == "1":
             self.open_dashboard(why="launch-hook")
         log.info("Catlendar started")
+
+    @objc.python_method
+    def start_housekeeping(self):
+        """Keep the database small without anyone having to think about it:
+        roll old days up to the ten minute slots the reports use, then sleep
+        a day. Runs off the main thread so a vacuum never stalls the cat."""
+        def loop():
+            while True:
+                try:
+                    r = db.maintain(
+                        compact_after_days=config.setting("compact_after_days"),
+                        history_days=config.setting("history_days"))
+                    if r["compacted_from"] != r["compacted_to"] or r["dropped"]:
+                        size = db.footprint()["bytes"] / 1e6
+                        log.info("housekeeping: samples %d -> %d, dropped %d, db %.1f MB",
+                                 r["compacted_from"], r["compacted_to"],
+                                 r["dropped"], size)
+                except Exception:
+                    log.exception("housekeeping failed")
+                time.sleep(24 * 3600)
+        threading.Thread(target=loop, daemon=True).start()
 
     def checkFullScreen_(self, timer):
         """Step aside while something is running full screen, come back after."""
