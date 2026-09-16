@@ -1414,7 +1414,7 @@ function queueManual(){
     if (!bh){ toast('Open this from the cat to save changes'); return; }
     bh.postMessage({action:'saveManual', day_start: D.day.start_ts,
                     day_end: D.day.end_ts, rows: rows});
-    toast('Saved. Reopen to see it counted.');
+    toast('Saved.');
   }, 600);
 }
 
