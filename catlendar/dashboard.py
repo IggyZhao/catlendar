@@ -47,7 +47,20 @@ def build_payload(today=None, scope="day"):
     payload["meta"]["date"] = today.isoformat()
     payload["meta"]["is_today"] = (today == report.today())
     payload["meta"]["earliest"] = _earliest_day()
+    payload["meta"]["latest"] = _latest_day()
+    payload["meta"]["is_future"] = today > report.today()
     return payload
+
+
+def _latest_day():
+    """The last day worth turning to: the furthest meeting already on the
+    calendar, so you can look ahead but not wander into empty weeks."""
+    with db.cursor() as conn:
+        row = conn.execute("SELECT MAX(start_ts) AS t FROM events").fetchone()
+    latest = report.today()
+    if row and row["t"]:
+        latest = max(latest, report.logical_date(row["t"]))
+    return latest.isoformat()
 
 
 def _earliest_day():

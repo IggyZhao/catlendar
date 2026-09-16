@@ -726,6 +726,7 @@ function calHeat(data){
 <script>
 /* ---------- opening sentence ---------- */
 function lede(d, scope){
+  if (scope === 'day' && D.meta.is_future) return ledeAhead(d);
   const top = d.projects.filter(p => p.key)[0];
   const st = D.status || {};
   const parts = [];
@@ -747,6 +748,38 @@ function lede(d, scope){
   return h('p','lede',parts.join(''));
 }
 
+/* A day that has not happened yet is a plan, not a record. */
+function ledeAhead(d){
+  const events = d.events || [];
+  if (!events.length)
+    return h('p','lede','Nothing on the calendar for '+esc(D.meta.range_label.day)+
+      '. <span class="dim">A clear day.</span>');
+  const mins = events.reduce((a,e) => a + e.seconds, 0);
+  const first = events[0];
+  const bits = [esc(D.meta.range_label.day)+' has <em>'+events.length+' meeting'+
+                (events.length>1?'s':'')+'</em>, '+fmt(mins)+' of them'];
+  bits.push(', starting at <em>'+clock(first.start)+'</em>. ');
+  const gap = longestGap(events);
+  if (gap && gap.seconds >= 3600)
+    bits.push('<span class="dim">Longest clear stretch: '+fmt(gap.seconds)+
+      ' from '+clock(gap.start)+'.</span>');
+  return h('p','lede', bits.join(''));
+}
+function longestGap(events){
+  if (!events.length) return null;
+  const day0 = D.day.start_ts;
+  const from = day0 + 5*3600;          // 9am on a 4am day
+  const until = day0 + 14*3600;        // 6pm
+  const busy = events.map(e => [Math.max(e.start, from), Math.min(e.end, until)])
+                     .filter(([a,b]) => b > a).sort((x,y) => x[0]-y[0]);
+  let cursor = from, best = null;
+  busy.concat([[until, until]]).forEach(([a,b]) => {
+    if (a - cursor > (best ? best.seconds : 0)) best = {start: cursor, seconds: a - cursor};
+    cursor = Math.max(cursor, b);
+  });
+  return best;
+}
+
 function tiles(d, scope){
   const box = h('div','tiles');
   const add = (cls,k,v,n) => {
@@ -755,6 +788,19 @@ function tiles(d, scope){
     if (n) t.appendChild(h('div','n',n));
     box.appendChild(t);
   };
+  if (scope === 'day' && D.meta.is_future){
+    const events = d.events || [];
+    const mins = events.reduce((a,e) => a + e.seconds, 0);
+    const gap = longestGap(events);
+    add('hero','Meetings', String(events.length), mins ? fmt(mins)+' in total' : 'nothing booked');
+    add('','First', events.length ? clock(events[0].start) : '-',
+        events.length ? esc(clip(events[0].title, 22)) : 'a clear day');
+    add('','Last ends', events.length ? clock(events[events.length-1].end) : '-',
+        events.length ? esc(clip(events[events.length-1].title, 22)) : '');
+    add('','Longest clear stretch', gap ? fmt(gap.seconds) : '-',
+        gap ? 'from '+clock(gap.start) : 'between 9am and 6pm');
+    return box;
+  }
   const span = (d.first_ts && d.last_ts && scope==='day') ? clock(d.first_ts)+' to '+clock(d.last_ts) : '';
   const per = scope==='day' ? '' : fmt(d.total_seconds/Math.max(1,d.active_days))+' a day';
   add('hero','Time worked', fmt(d.total_seconds),
@@ -1412,15 +1458,18 @@ function render(scope){
     if (scope === 'day'){
       const grid = h('div','daygrid');
       const main = h('div',null);
-      const c = card(D.meta.is_today ? 'Your day so far' : 'That day, hour by hour',
+      const c = card(D.meta.is_today ? 'Your day so far'
+                    : (D.meta.is_future ? 'The day ahead' : 'That day, hour by hour'),
         D.meta.is_today
           ? 'One row per project. A bar shows when you were on it, the line marks right now, '+
             'and a dashed box is a meeting still ahead of you.'
-          : 'One row per project. A bar shows when you were on it.');
+          : (D.meta.is_future
+             ? 'What is booked. Nothing has been tracked yet, so the rows below fill in as the day goes.'
+             : 'One row per project. A bar shows when you were on it.'));
       c.appendChild(dayTimeline(d, cmap));
       main.appendChild(c);
       main.appendChild(tiles(d, scope));
-      if (d.total_seconds > 0)
+      if (d.total_seconds > 0 && !D.meta.is_future)
         main.appendChild(h('p','overlap','Counted in ten minute slots. A slot counts when you '+
           'were at the keyboard, when Claude was working, or during a meeting. '+
           fmt(d.total_seconds)+' is the clock: every slot once, however many things were in it.'));
@@ -1484,7 +1533,7 @@ function render(scope){
     g.appendChild(pc); g.appendChild(ac);
     target.appendChild(g);
 
-    if (scope === 'day') target.appendChild(manualCard(d));
+    if (scope === 'day' && !D.meta.is_future) target.appendChild(manualCard(d));
     target.appendChild(trailCard(d));
     target.appendChild(meetingsCard(d));
     target.appendChild(detailCard(d, cmap));
@@ -1523,7 +1572,7 @@ function wireDayNav(scope){
   prev.hidden = next.hidden = !dayView;
   if (!dayView){ today.hidden = true; return; }
   prev.disabled = (D.meta.date <= (D.meta.earliest || D.meta.date));
-  next.disabled = !!D.meta.is_today;
+  next.disabled = (D.meta.date >= (D.meta.latest || D.meta.date));
   today.hidden = !!D.meta.is_today;
   prev.onclick = () => { if (!prev.disabled) goToDate(shiftDate(-1)); };
   next.onclick = () => { if (!next.disabled) goToDate(shiftDate(1)); };
