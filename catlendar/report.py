@@ -162,7 +162,17 @@ def summarize(start_ts, end_ts, scope="day"):
     pending = []                          # evidence that can label a slot but not create one
 
     def span_slots(a, b):
-        a, b = max(int(a), start_ts), min(int(b), horizon - 1)
+        """Slots touched by the half open interval [a, b).
+
+        An hour that ends at 10:30 stops there: it must not claim the slot that
+        starts at 10:30, or every span ending on a ten minute boundary counts
+        ten minutes too long.
+        """
+        a = max(int(a), start_ts)
+        b = min(int(b), horizon)
+        if b <= a:                  # an instant, like a saved file: the slot
+            b = a + 1               # it landed in
+        b = min(b - 1, horizon - 1)
         if b < a:
             return range(0)
         return range(_slot_index(a, start_ts), _slot_index(b, start_ts) + 1)
