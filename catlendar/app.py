@@ -396,6 +396,8 @@ class CatlendarDelegate(NSObject):
             log.info("good news saved (%d items)", count)
             if count > before and self.pet is not None:
                 self.pet.move("celebrate")
+        elif action == "editBlock":
+            self._edit_block(body)
         elif action == "saveManual":
             rows = []
             for r in body.get("rows") or []:
@@ -405,10 +407,11 @@ class CatlendarDelegate(NSObject):
                     continue
                 if end <= start:
                     continue
+                mode = r.get("mode")
                 rows.append({"start_ts": start, "end_ts": end,
                              "project": r.get("project") or None,
                              "note": r.get("note") or "",
-                             "mode": "only" if r.get("mode") == "only" else "add"})
+                             "mode": mode if mode in ("add", "only", "remove") else "add"})
             count = db.replace_manual_for_day(int(body.get("day_start", 0)),
                                               int(body.get("day_end", 0)), rows)
             log.info("manual entries saved: %d", count)
@@ -500,6 +503,33 @@ class CatlendarDelegate(NSObject):
                 if not tracker.accessibility_trusted()
                 else "x-apple.systempreferences:com.apple.preference.security?Privacy_Calendars")
         subprocess.Popen(["open", pane])
+
+    @objc.python_method
+    def _edit_block(self, body):
+        """Lengthen, shorten or delete one block on the timeline.
+
+        A block is derived from what was detected, so it cannot be edited in
+        place. Instead the original range is removed for that project and the
+        new range, if any, is added back.
+        """
+        project = body.get("project") or None
+        try:
+            was_start, was_end = int(body["was_start"]), int(body["was_end"])
+        except (KeyError, TypeError, ValueError):
+            return
+        new_start = body.get("start")
+        new_end = body.get("end")
+
+        db.clear_manual_overlapping(project, was_start, was_end)
+        db.add_manual({"start_ts": was_start, "end_ts": was_end, "project": project,
+                       "note": "block edit: removed", "mode": "remove"})
+        if new_start and new_end and int(new_end) > int(new_start):
+            db.add_manual({"start_ts": int(new_start), "end_ts": int(new_end),
+                           "project": project, "note": "block edit: set",
+                           "mode": "add"})
+            log.info("block for %s reset to %s-%s", project, new_start, new_end)
+        else:
+            log.info("block for %s deleted", project)
 
     @objc.python_method
     def _answer(self, question):

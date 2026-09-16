@@ -212,7 +212,11 @@ def summarize(start_ts, end_ts, scope="day"):
         for slot in span_slots(ev["start_ts"], ev["end_ts"]):
             mark(slot, ev["project"], "meeting" if real_meeting else None,
                  presence=real_meeting and counts_as_work)
+    removals = []
     for m in manual:
+        if m["mode"] == "remove":
+            removals.append(m)        # applied last, so an edit always wins
+            continue
         for slot in span_slots(m["start_ts"], m["end_ts"]):
             mark(slot, m["project"], "manual")
         if m["mode"] == "only":
@@ -227,6 +231,13 @@ def summarize(start_ts, end_ts, scope="day"):
 
     for slot, project in only_slots.items():
         slot_projects[slot] = {project} if project else set()
+
+    # Shortening or deleting a block drops that project from those slots. The
+    # slot itself stays on the clock: you were still at the keyboard, the time
+    # simply stops counting towards this project.
+    for m in removals:
+        for slot in span_slots(m["start_ts"], m["end_ts"]):
+            slot_projects[slot].discard(m["project"])
 
     # ---- roll the slots up
     by_project, by_activity, by_app, by_hour = Counter(), Counter(), Counter(), Counter()

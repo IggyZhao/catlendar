@@ -162,9 +162,13 @@ Click the cat, or run `python -m catlendar report`.
 - **Pipeline**: whatever you are tracking, with statuses (to be done, in prep,
   under review, accepted, rejected, done, not done). Editable in the page.
 - **To do** and **Good news** sit beside today, both editable.
+- **Click any bar on the timeline** to lengthen it, shorten it or remove it.
+  Blocks are worked out from what was detected, so an edit is stored as an
+  override rather than changing history.
 - **Add your own time** for anything the computer could not see: reading on
   paper, a phone call, a whiteboard. "also" counts it alongside what was
-  detected, "instead" makes those slots count only as that.
+  detected, "instead" makes those slots count only as that, "removed" takes it
+  away.
 
 ## The cat
 

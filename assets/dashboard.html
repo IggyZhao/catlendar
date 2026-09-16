@@ -134,6 +134,7 @@
   .mrow .mode{font-size:11px;color:var(--ink-2);border:1px solid var(--rule);border-radius:99px;
     padding:2px 9px;cursor:pointer;background:var(--card);white-space:nowrap}
   .mrow .mode[data-mode="only"]{background:var(--accent-soft);border-color:var(--accent-line);color:var(--accent)}
+  .mrow .mode[data-mode="remove"]{background:#F6E9E8;border-color:#DCB5B3;color:var(--bad)}
   .overlap{font-size:12px;color:var(--ink-3);margin:-6px 0 18px}
   @media (max-width:820px){.grid2{grid-template-columns:1fr}}
   .scrollx{overflow-x:auto}
@@ -156,6 +157,23 @@
   .pill{display:inline-block;padding:1.5px 8px;border-radius:99px;font-size:11px;
         background:var(--inset);color:var(--ink-2);border:1px solid var(--rule)}
 
+  #blockedit{position:fixed;z-index:60;background:var(--card);border:1px solid var(--rule);
+    border-radius:12px;padding:14px 15px;box-shadow:0 12px 34px rgba(31,30,29,.2);
+    font-size:12.5px;min-width:250px}
+  #blockedit[hidden]{display:none}
+  #blockedit .who{font-weight:600;color:var(--ink);margin-bottom:3px}
+  #blockedit .sub{color:var(--ink-3);font-size:11.5px;margin-bottom:11px}
+  #blockedit .times{display:flex;align-items:center;gap:7px;margin-bottom:12px}
+  #blockedit input[type=time]{font:inherit;font-size:12.5px;border:1px solid var(--rule);
+    border-radius:7px;padding:4px 7px;background:var(--card);color:var(--ink);
+    font-variant-numeric:tabular-nums}
+  #blockedit .acts{display:flex;gap:6px}
+  #blockedit button{font:inherit;font-size:12.5px;padding:6px 12px;border-radius:8px;
+    cursor:pointer;border:1px solid var(--rule);background:var(--card);color:var(--ink-2)}
+  #blockedit button.save{border-color:var(--accent-line);background:var(--accent-soft);color:var(--accent)}
+  #blockedit button.del{margin-left:auto;border-color:#E3C3C0;color:var(--bad)}
+  #blockedit button:hover{filter:brightness(.97)}
+  .mark-el.editable{cursor:pointer}
   #tip{position:fixed;pointer-events:none;z-index:50;background:var(--ink);color:#FAF9F6;
        border-radius:9px;padding:8px 11px;font-size:12px;opacity:0;transition:opacity .09s;
        box-shadow:0 8px 24px rgba(31,30,29,.22);max-width:330px;line-height:1.45}
@@ -266,6 +284,7 @@
   <p class="note" id="footer"></p>
 </div>
 <div id="tip"></div>
+<div id="blockedit" hidden></div>
 <div id="toast"></div>
 
 <script>
@@ -455,7 +474,10 @@ function dayTimeline(d, cmap){
       }
       bindTip(g, '<b>'+esc(label)+'</b><br><span class="t-k">'+clock(b.start)+' to '+clock(b.end)+
         ' · '+fmt(b.seconds)+' · '+esc(b.activity_label)+'</span>'+
-        (b.title?'<br>'+esc(clip(b.title,64)):''));
+        (b.title?'<br>'+esc(clip(b.title,64)):'')+
+        '<br><span class="t-k">click to change or remove</span>');
+      g.classList.add('editable');
+      g.addEventListener('click', ev => openBlockEditor(b, label, ev));
       plot.appendChild(g);
     });
     row++;
@@ -484,6 +506,72 @@ function dayTimeline(d, cmap){
   wrap.appendChild(labelBox); wrap.appendChild(scroller);
   return wrap;
 }
+
+/* ---------- changing one stretch on the timeline ---------- */
+/* A day starts at 4am, so start_ts is 04:00, not midnight. Clock times have to
+   be measured from midnight or everything lands four hours late. An early hour
+   belongs to the small hours at the END of this day, hence the roll forward. */
+function dayTimeToTs(hhmm){
+  const [H, M] = String(hhmm).split(':').map(Number);
+  const midnight = new Date(D.day.start_ts * 1000);
+  midnight.setHours(0, 0, 0, 0);
+  let ts = Math.round(midnight.getTime() / 1000) + H * 3600 + M * 60;
+  if (ts < D.day.start_ts) ts += 86400;
+  return ts;
+}
+
+function hhmmLocal(ts){
+  const d = new Date(ts*1000);
+  return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+}
+function openBlockEditor(block, label, ev){
+  ev.stopPropagation();
+  const box = document.getElementById('blockedit');
+  box.innerHTML = '';
+  box.appendChild(h('div','who', esc(label)));
+  box.appendChild(h('div','sub', clock(block.start)+' to '+clock(block.end)+
+                    ' · '+fmt(block.seconds)));
+
+  const times = h('div','times');
+  const from = document.createElement('input'); from.type='time'; from.value = hhmmLocal(block.start);
+  const to   = document.createElement('input'); to.type='time';   to.value = hhmmLocal(block.end);
+  times.appendChild(from); times.appendChild(h('span',null,'to')); times.appendChild(to);
+  box.appendChild(times);
+
+  const send = (payload) => {
+    const b = bridge();
+    if (!b){ toast('Open this from the cat to change it'); return; }
+    b.postMessage(Object.assign({action:'editBlock', project: block.project,
+                                 was_start: block.start, was_end: block.end}, payload));
+    box.hidden = true;
+    toast('Changed. Reopen to see it counted.');
+  };
+
+  const acts = h('div','acts');
+  const save = h('button','save','save');
+  save.addEventListener('click', () => {
+    const a = dayTimeToTs(from.value), z = dayTimeToTs(to.value);
+    if (!(z > a)){ toast('The end has to be after the start'); return; }
+    send({start: a, end: z});
+  });
+  const cancel = h('button',null,'cancel');
+  cancel.addEventListener('click', () => { box.hidden = true; });
+  const del = h('button','del','remove');
+  del.addEventListener('click', () => send({start: null, end: null}));
+  acts.appendChild(save); acts.appendChild(cancel); acts.appendChild(del);
+  box.appendChild(acts);
+
+  box.hidden = false;
+  const r = box.getBoundingClientRect();
+  let x = ev.clientX - r.width/2, y = ev.clientY + 18;
+  x = Math.max(10, Math.min(x, innerWidth - r.width - 10));
+  if (y + r.height > innerHeight - 10) y = ev.clientY - r.height - 14;
+  box.style.left = x+'px'; box.style.top = y+'px';
+}
+document.addEventListener('click', e => {
+  const box = document.getElementById('blockedit');
+  if (box && !box.hidden && !box.contains(e.target)) box.hidden = true;
+});
 
 /* ---------- research / teaching / service, as one bar ---------- */
 function kindBar(kinds){
@@ -1225,11 +1313,14 @@ function manualCard(d){
       if (p.key === entry.project) o.selected = true;
       sel.appendChild(o);
     });
-    const mode = h('span','mode', entry.mode === 'only' ? 'instead' : 'also');
+    const MODES = ['add','only','remove'];
+    const MODE_TEXT = {add:'also', only:'instead', remove:'removed'};
+    const mode = h('span','mode', MODE_TEXT[entry.mode] || 'also');
     mode.dataset.mode = entry.mode || 'add';
+    mode.title = 'also: counts alongside. instead: only this. removed: takes it away.';
     mode.addEventListener('click', () => {
-      const next = mode.dataset.mode === 'only' ? 'add' : 'only';
-      mode.dataset.mode = next; mode.textContent = next === 'only' ? 'instead' : 'also';
+      const next = MODES[(MODES.indexOf(mode.dataset.mode) + 1) % MODES.length];
+      mode.dataset.mode = next; mode.textContent = MODE_TEXT[next];
       queueManual();
     });
     const del = h('button','del','&times;');
@@ -1268,11 +1359,7 @@ function queueManual(){
       const times = r.querySelectorAll('input[type=time]');
       const sel = r.querySelector('select');
       if (!times[0].value || !times[1].value) return;
-      const toTs = (v) => {
-        const [H,M] = v.split(':').map(Number);
-        return D.day.start_ts + H*3600 + M*60;
-      };
-      let a = toTs(times[0].value), b = toTs(times[1].value);
+      let a = dayTimeToTs(times[0].value), b = dayTimeToTs(times[1].value);
       if (b <= a) b = a + 600;
       rows.push({start_ts:a, end_ts:b, project:sel.value, note:'',
                  mode:r.querySelector('.mode').dataset.mode});

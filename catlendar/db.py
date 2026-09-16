@@ -151,6 +151,27 @@ def manual_between(start_ts, end_ts):
             (int(start_ts), int(end_ts)))]
 
 
+def add_manual(row):
+    with cursor() as conn:
+        conn.execute(
+            "INSERT INTO manual (start_ts, end_ts, project, note, mode)"
+            " VALUES (:start_ts,:end_ts,:project,:note,:mode)", row)
+    return True
+
+
+def clear_manual_overlapping(project, start_ts, end_ts, mode=None):
+    """Drop earlier overrides for this project in this window, so repeated
+    edits to the same block replace each other instead of piling up."""
+    sql = ("DELETE FROM manual WHERE project IS ? AND end_ts > ? AND start_ts < ?"
+           " AND note LIKE 'block edit%'")
+    args = [project, int(start_ts), int(end_ts)]
+    if mode:
+        sql += " AND mode = ?"
+        args.append(mode)
+    with cursor() as conn:
+        return conn.execute(sql, args).rowcount
+
+
 def replace_manual_for_day(day_start, day_end, rows):
     """The dashboard sends the whole day back, so swap that day wholesale."""
     with cursor() as conn:
