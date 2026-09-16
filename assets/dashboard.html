@@ -544,7 +544,7 @@ function openBlockEditor(block, label, ev){
     b.postMessage(Object.assign({action:'editBlock', project: block.project,
                                  was_start: block.start, was_end: block.end}, payload));
     box.hidden = true;
-    toast('Changed. Reopen to see it counted.');
+    toast('Changed.');
   };
 
   const acts = h('div','acts');

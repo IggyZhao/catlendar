@@ -394,6 +394,14 @@ class CatlendarDelegate(NSObject):
         threading.Thread(target=work, daemon=True).start()
 
     @objc.python_method
+    def refresh_after_edit(self, why):
+        """Reload now, whatever day is on screen. The periodic tick refuses to
+        touch a past day and throttles itself to two minutes, which is exactly
+        wrong right after you have changed something."""
+        self._last_build = 0
+        self.rebuild_dashboard(show=False, why=why)
+
+    @objc.python_method
     def on_page_message(self, body):
         action = (body or {}).get("action")
         if action == "savePipeline":
@@ -412,6 +420,8 @@ class CatlendarDelegate(NSObject):
             log.info("chat action %s: %s %s", proposal.get("action"), ok, detail)
             if ok and self.pet is not None and proposal.get("action") == "add_good_news":
                 self.pet.move("celebrate")
+            if ok and proposal.get("action") == "add_time":
+                self.refresh_after_edit("chat action")
         elif action == "saveGoodNews":
             before = len(goodnews.load())
             count = goodnews.save(body.get("items") or [])
@@ -420,6 +430,7 @@ class CatlendarDelegate(NSObject):
                 self.pet.move("celebrate")
         elif action == "editBlock":
             self._edit_block(body)
+            self.refresh_after_edit("block edit")
         elif action == "saveManual":
             rows = []
             for r in body.get("rows") or []:
@@ -437,6 +448,7 @@ class CatlendarDelegate(NSObject):
             count = db.replace_manual_for_day(int(body.get("day_start", 0)),
                                               int(body.get("day_end", 0)), rows)
             log.info("manual entries saved: %d", count)
+            self.refresh_after_edit("manual save")
         elif action == "scope":
             self.dashboard_scope = str(body.get("scope") or "day")
         elif action == "showDate":
