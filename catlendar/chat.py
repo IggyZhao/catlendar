@@ -41,7 +41,11 @@ Append one fenced block, exactly:
 ```
 
 Allowed actions:
-{"action":"add_time","start":"HH:MM","end":"HH:MM","project":"<project key>","mode":"add"|"only"}
+{"action":"add_time","start":"HH:MM","end":"HH:MM","project":"<project key>","mode":"add"}
+
+Use mode "add" unless the user explicitly says the time should count as that
+project INSTEAD of what was detected. "only" erases everything else in those ten
+minute slots, so never choose it just because the user said "I was doing X".
 {"action":"add_good_news","text":"..."}
 {"action":"add_todo","text":"...","date":"YYYY-MM-DD"}
 {"action":"set_status","text":"<exact item text>","status":"to_be_done|in_prep|under_review|accepted|rejected|done|not_done"}
@@ -294,9 +298,12 @@ def describe(action):
     """One line for the confirm button."""
     kind = action.get("action")
     if kind == "add_time":
-        return "Add {} to {} from {} to {}".format(
-            "only" if action.get("mode") == "only" else "time",
-            action.get("project"), action.get("start"), action.get("end"))
+        if action.get("mode") == "only":
+            return ("REPLACE everything between {} and {} with {}, erasing whatever "
+                    "else was detected in those slots").format(
+                        action.get("start"), action.get("end"), action.get("project"))
+        return "Add {} to {} as {}".format(
+            action.get("start"), action.get("end"), action.get("project"))
     if kind == "add_good_news":
         return "Add good news: {}".format(action.get("text"))
     if kind == "add_todo":
