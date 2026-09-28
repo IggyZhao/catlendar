@@ -141,7 +141,12 @@ class PetWindow(NSObject):
 
     @objc.python_method
     def set_layer(self, layer):
+        """Changing the level alone leaves the window where it was in the
+        ordering, which is how the cat ends up visible but deaf to clicks after
+        a meeting alert has lifted it and put it back. Re-order it every time."""
         self.window.setLevel_(DESKTOP_LEVEL if layer == "desktop" else NSFloatingWindowLevel)
+        if self.window.isVisible():
+            self.window.orderFrontRegardless()
 
     @objc.python_method
     def show(self):

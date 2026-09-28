@@ -263,6 +263,7 @@ class CatlendarDelegate(NSObject):
         title = " paused" if state == "paused" else " " + report.fmt_hm(status["today_seconds"])
         self.status_item.button().setTitle_(title)
         self.status = status
+        self.keep_cat_clickable()
         # never reload under someone editing the pipeline
         # a past day never changes, so there is nothing to refresh
         if (self.dashboard_window is not None and self.dashboard_window.visible()
@@ -270,6 +271,25 @@ class CatlendarDelegate(NSObject):
                 and self.dashboard_scope != "pipeline"
                 and (time.time() - getattr(self, "_last_build", 0)) > 120):
             self.rebuild_dashboard(show=False, why="tick")
+
+    @objc.python_method
+    def keep_cat_clickable(self):
+        """The cat has twice ended up on screen but ignoring clicks after hours
+        of running. The cause is not pinned down, so re-assert its level and
+        ordering every few minutes: it is idempotent, it does not move the cat,
+        and it means the worst case is a few minutes rather than a restart."""
+        if self.pet is None or db.get_meta("pet_hidden", "0") == "1":
+            return
+        if getattr(self, "_auto_hidden", False) or getattr(self, "_raised", False):
+            return                       # something else is deliberately in charge
+        if time.time() - getattr(self, "_cat_touched", 0) < 300:
+            return
+        self._cat_touched = time.time()
+        try:
+            if self.pet.visible():
+                self.pet.set_layer(str(config.setting("cat_layer")))
+        except Exception:
+            log.exception("could not re-assert the cat window")
 
     @objc.python_method
     def raise_for_alert(self, alerting):
