@@ -1764,6 +1764,7 @@ function render(scope){
     const d = D[scope];
     const cmap = colorMap(d.projects);
     document.getElementById('subtitle').textContent = D.meta.range_label[scope];
+    wireDayNav(scope);          // day, week and month all turn back
     view.appendChild(lede(d, scope));
 
     if (scope === 'day'){
@@ -1875,19 +1876,66 @@ function goToDate(iso){
   if (!b){ toast('Open this from the cat to browse other days'); return; }
   b.postMessage({action:'showDate', date: iso});
 }
+/* The week and the month are worth turning back through, not just the day:
+   last week is the one you compare this week against. */
+function isoOf(d){
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+
+         String(d.getDate()).padStart(2,'0');
+}
+function dateOf(iso){ const [y,m,d] = iso.split('-').map(Number); return new Date(y, m-1, d); }
+
+/* first and last day of the period an anchor date falls in */
+function periodBounds(scope, iso){
+  const d = dateOf(iso);
+  if (scope === 'week'){
+    const back = (d.getDay() + 6) % 7;                 // Monday starts the week
+    const a = new Date(d); a.setDate(d.getDate() - back);
+    const b = new Date(a); b.setDate(a.getDate() + 6);
+    return [isoOf(a), isoOf(b)];
+  }
+  if (scope === 'month'){
+    const a = new Date(d.getFullYear(), d.getMonth(), 1);
+    const b = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+    return [isoOf(a), isoOf(b)];
+  }
+  return [iso, iso];
+}
+function stepPeriod(scope, iso, dir){
+  const d = dateOf(iso);
+  if (scope === 'week') d.setDate(d.getDate() + 7 * dir);
+  else if (scope === 'month') d.setDate(1), d.setMonth(d.getMonth() + dir);
+  else d.setDate(d.getDate() + dir);
+  return isoOf(d);
+}
+
 function wireDayNav(scope){
-  const nav = document.querySelector('.daynav');
   const prev = document.getElementById('prevday');
   const next = document.getElementById('nextday');
   const today = document.getElementById('todaybtn');
-  const dayView = scope === 'day';
-  prev.hidden = next.hidden = !dayView;
-  if (!dayView){ today.hidden = true; return; }
-  prev.disabled = (D.meta.date <= (D.meta.earliest || D.meta.date));
-  next.disabled = (D.meta.date >= (D.meta.latest || D.meta.date));
-  today.hidden = !!D.meta.is_today;
-  prev.onclick = () => { if (!prev.disabled) goToDate(shiftDate(-1)); };
-  next.onclick = () => { if (!next.disabled) goToDate(shiftDate(1)); };
+  if (scope === 'pipeline'){
+    prev.hidden = next.hidden = today.hidden = true;
+    return;
+  }
+  prev.hidden = next.hidden = false;
+  const here = D.meta.date || todayISO();
+  const earliest = D.meta.earliest || here;
+  const latest = D.meta.latest || here;
+
+  // a step is allowed while the period it lands on still overlaps what exists
+  const canGo = (dir) => {
+    const [a, b] = periodBounds(scope, stepPeriod(scope, here, dir));
+    return dir < 0 ? b >= earliest : a <= latest;
+  };
+  prev.disabled = !canGo(-1);
+  next.disabled = !canGo(1);
+
+  const [from, to] = periodBounds(scope, here);
+  const now = todayISO();
+  today.hidden = (now >= from && now <= to);
+  today.textContent = scope === 'week' ? 'this week'
+                    : scope === 'month' ? 'this month' : 'today';
+  prev.onclick = () => { if (!prev.disabled) goToDate(stepPeriod(scope, here, -1)); };
+  next.onclick = () => { if (!next.disabled) goToDate(stepPeriod(scope, here, 1)); };
   today.onclick = () => goToDate(todayISO());
 }
 
