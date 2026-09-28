@@ -35,3 +35,4 @@ Thumbs.db
 .idea/
 .vscode/
 _preview*.html
+.scrub_check.py
