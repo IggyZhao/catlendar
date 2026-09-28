@@ -158,10 +158,16 @@ Click the cat, or run `python -m catlendar report`.
 
 - **Today**: a timeline with one row per project, a line marking now, dashed boxes
   for meetings still ahead, and arrows to walk back through any earlier day.
-- **Week** and **Month**: stacked columns and a calendar heatmap.
+- **Week** and **Month**: stacked columns and a calendar heatmap. The same arrows
+  step a week or a month at a time, so last week is one click away.
 - **Pipeline**: whatever you are tracking, with statuses (to be done, in prep,
   under review, accepted, rejected, done, not done). Editable in the page.
-- **To do** and **Good news** sit beside today, both editable.
+- **To do**, **Wins** and **Good news** sit beside today, all editable. Wins are
+  the small finished things, kept per day, with a streak counted back from the
+  last day you wrote one, so an empty morning does not read as a broken run.
+- **Wish wall** at the foot of the pipeline: no dates and nothing overdue. Write
+  each one as though it has already happened. A wish that comes true stays on the
+  wall, marked with the date.
 - **Click any bar on the timeline** to lengthen it, shorten it or remove it.
   Blocks are worked out from what was detected, so an edit is stored as an
   override rather than changing history.
