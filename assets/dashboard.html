@@ -1287,6 +1287,7 @@ function queueGoodNews(){
       const text = el.textContent.trim();
       if (text) items.push({text: text, date: el.dataset.date || todayISO()});
     });
+    D.goodnews = items.slice();
     const b = bridge();
     if (!b){ toast('Open this from the cat to save changes'); return; }
     b.postMessage({action:'saveGoodNews', items: items});
@@ -1403,6 +1404,7 @@ function queueWins(){
       const text = r.querySelector('.wintext').textContent.trim();
       if (text) items.push({text: text, at: r.dataset.at || ''});
     });
+    D.wins = items.slice();
     const b = bridge();
     if (!b){ toast('Open this from the cat to save changes'); return; }
     b.postMessage({action:'saveWins', date: D.meta.date, items: items});
@@ -1518,6 +1520,10 @@ function queueWishes(){
       if (text) items.push({text: text, since: t.dataset.since || todayISO(),
                             granted: t.dataset.granted || ''});
     });
+    // hold the new state in the payload too. Switching tabs redraws from D,
+    // so a wish saved to disk but not written back here vanishes off the wall
+    // the moment you look at another view.
+    D.wishes = items.slice();
     const b = bridge();
     if (!b){ toast('Open this from the cat to save changes'); return; }
     b.postMessage({action:'saveWishes', items: items});
