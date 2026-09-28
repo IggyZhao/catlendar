@@ -98,6 +98,79 @@
   .gnrow:hover .del{opacity:1}
   .gnrow .del:hover{background:#F6E9E6;color:var(--bad)}
 
+
+  /* small wins: the one card that exists to feel good */
+  .winhead{display:flex;align-items:baseline;gap:14px;margin:-2px 0 10px}
+  .winstreak{font-family:var(--serif);font-size:25px;line-height:1;color:var(--s1);
+             font-variant-numeric:tabular-nums}
+  .winstreak small{font-family:inherit;font-size:12px;color:var(--ink-3);margin-left:5px;
+                   font-variant-numeric:normal}
+  .wintally{margin-left:auto;font-size:11.5px;color:var(--ink-3);text-align:right;line-height:1.5}
+  .winrow{display:flex;align-items:flex-start;gap:9px;padding:8px 0;
+          border-bottom:1px solid var(--rule-soft);font-size:12.5px}
+  .winrow:last-child{border-bottom:0}
+  .winmark{flex:0 0 auto;color:var(--s1);font-size:12px;padding-top:2px;line-height:1}
+  .wintext{flex:1 1 auto;min-width:0;color:var(--ink);line-height:1.45}
+  .wintext:empty:before{content:attr(data-ph);color:var(--ink-3)}
+  .winat{flex:0 0 auto;color:var(--ink-3);font-size:11px;padding-top:2px;
+         font-variant-numeric:tabular-nums}
+  .winrow .del{flex:0 0 auto;border:0;background:transparent;color:var(--ink-3);cursor:pointer;
+               font-size:15px;line-height:1;padding:1px 5px;border-radius:6px;opacity:0}
+  .winrow:hover .del{opacity:1}
+  .winrow .del:hover{background:#F6E9E6;color:var(--bad)}
+  .winrow.fresh{animation:winin .42s cubic-bezier(.2,.9,.3,1.2)}
+  @keyframes winin{from{opacity:0;transform:translateY(-6px) scale(.98)}to{opacity:1;transform:none}}
+  .winadd{display:flex;gap:8px;align-items:center;margin-top:10px;
+          border:1px dashed var(--rule);border-radius:10px;padding:2px 4px 2px 11px}
+  .winadd:focus-within{border-color:var(--s1);background:var(--accent-soft)}
+  .winadd input{flex:1 1 auto;border:0;background:transparent;font:inherit;font-size:12.5px;
+                color:var(--ink);padding:9px 0;outline:none;min-width:0}
+  .winadd input::placeholder{color:var(--ink-3)}
+  .winadd button{border:0;background:transparent;color:var(--s1);font:inherit;font-size:12.5px;
+                 cursor:pointer;padding:8px 11px;border-radius:8px;white-space:nowrap}
+  .winadd button:hover{background:var(--accent-soft)}
+  .card.wins{position:relative;overflow:hidden}
+  .confetti{position:absolute;top:34px;left:50%;width:7px;height:9px;border-radius:2px;
+            pointer-events:none;opacity:0;animation:pop 1.05s ease-out forwards}
+  @keyframes pop{
+    0%{opacity:1;transform:translate(0,0) rotate(0deg) scale(.6)}
+    100%{opacity:0;transform:translate(var(--dx),var(--dy)) rotate(var(--rot)) scale(1)}}
+
+
+  /* the wish wall, at the foot of the pipeline */
+  .wishwall{margin-top:26px}
+  .wishhead{display:flex;align-items:baseline;gap:12px;margin-bottom:4px}
+  .wishhead h3{font-family:var(--serif);font-size:19px;font-weight:500;color:var(--ink);margin:0}
+  .wishhead .count{margin-left:auto;font-size:11.5px;color:var(--ink-3)}
+  .wishcap{font-size:12.5px;color:var(--ink-2);margin:0 0 14px;max-width:60ch}
+  .wishgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(248px,1fr));gap:12px}
+  .wish{position:relative;border:1px solid var(--rule);border-radius:14px;padding:17px 17px 13px;
+        background:linear-gradient(160deg,var(--card) 0%,var(--accent-soft) 190%);
+        display:flex;flex-direction:column;gap:9px;min-height:104px;overflow:hidden}
+  .wish:hover{border-color:var(--accent-line)}
+  .wishtext{font-family:var(--serif);font-size:16.5px;line-height:1.42;color:var(--ink);
+            outline:none;flex:1 1 auto}
+  .wishtext:empty:before{content:attr(data-ph);color:var(--ink-3);font-style:italic}
+  .wishfoot{display:flex;align-items:center;gap:9px;font-size:11px;color:var(--ink-3)}
+  .wishheld{font-variant-numeric:tabular-nums}
+  .wishtick{margin-left:auto;border:1px solid var(--rule);background:transparent;color:var(--ink-3);
+            font:inherit;font-size:11px;padding:4px 10px;border-radius:999px;cursor:pointer;
+            white-space:nowrap}
+  .wishtick:hover{border-color:var(--s1);color:var(--s1);background:var(--accent-soft)}
+  .wish .del{position:absolute;top:8px;right:8px;border:0;background:transparent;color:var(--ink-3);
+             cursor:pointer;font-size:15px;line-height:1;padding:2px 6px;border-radius:6px;opacity:0}
+  .wish:hover .del{opacity:1}
+  .wish .del:hover{background:#F6E9E6;color:var(--bad)}
+  .wish.granted{background:linear-gradient(160deg,var(--seq-1) 0%,var(--card) 150%);
+                border-color:var(--s1)}
+  .wish.granted .wishtext{color:var(--s1)}
+  .wish.granted .wishtick{border-color:var(--s1);color:var(--s1)}
+  .wish.new{animation:winin .42s cubic-bezier(.2,.9,.3,1.2)}
+  .wishadd{margin-top:12px}
+  .wishadd button{border:1px dashed var(--rule);background:transparent;color:var(--ink-3);
+    font:inherit;font-size:12.5px;padding:9px 15px;border-radius:10px;cursor:pointer;width:100%}
+  .wishadd button:hover{border-color:var(--accent-line);color:var(--accent);background:var(--accent-soft)}
+
   /* ask */
   .chatlog{max-height:300px;overflow-y:auto;margin-bottom:10px}
   .chatlog:empty{display:none}
@@ -1097,6 +1170,7 @@ function pipelineView(){
   const hint = h('p','note','Click a status chip to cycle it. Click any text to edit it. '+
     'Changes save straight to pipeline.yaml.');
   view.appendChild(hint);
+  view.appendChild(wishWall());
   return view;
 }
 
@@ -1218,6 +1292,237 @@ function queueGoodNews(){
     b.postMessage({action:'saveGoodNews', items: items});
     toast('Saved');
   }, 600);
+}
+
+
+/* ---------- small wins ---------- */
+function winsCard(){
+  const st = D.wins_stats || {streak:0, today:0, week:0, total:0};
+  const mine = D.meta.is_today;
+  const c = card('Wins \u2728', mine
+    ? 'What you finished. Write the small ones too, they are most of the day.'
+    : 'What you finished that day.');
+  c.classList.add('wins');
+
+  const head = h('div','winhead');
+  if (st.streak > 0){
+    const s = h('div','winstreak');
+    s.innerHTML = st.streak + ' <small>day' + (st.streak>1?'s':'') + ' in a row</small>';
+    head.appendChild(s);
+  } else {
+    head.appendChild(h('div','winstreak','<small>Start one today.</small>'));
+  }
+  const tally = h('div','wintally');
+  tally.innerHTML = '<div>' + st.week + ' this week</div><div>' + st.total + ' all time</div>';
+  head.appendChild(tally);
+  c.appendChild(head);
+
+  const list = h('div','winlist');
+  const row = (item, fresh) => {
+    const r = h('div','winrow' + (fresh ? ' fresh' : ''));
+    r.appendChild(h('span','winmark','\u2726'));
+    const txt = h('span','wintext');
+    txt.contentEditable = 'true';
+    txt.textContent = item.text || '';
+    txt.dataset.ph = 'what you finished';
+    txt.addEventListener('input', queueWins);
+    txt.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.keyCode === 13){ e.preventDefault(); txt.blur(); }
+    });
+    r.appendChild(txt);
+    const at = h('span','winat'); at.textContent = item.at || '';
+    r.dataset.at = item.at || '';
+    r.appendChild(at);
+    const del = h('button','del','&times;');
+    del.title = 'remove';
+    del.addEventListener('click', () => { r.remove(); queueWins(); refreshWinsEmpty(list); });
+    r.appendChild(del);
+    return r;
+  };
+  (D.wins || []).forEach(w => list.appendChild(row(w, false)));
+  c.appendChild(list);
+  refreshWinsEmpty(list);
+
+  if (!D.meta.is_future){
+    const add = h('div','winadd');
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.placeholder = mine ? 'finished something?' : 'add one for that day';
+    const btn = h('button',null,'add \u2726');
+    const commit = () => {
+      const text = input.value.trim();
+      if (!text) return;
+      const blank = list.querySelector('.empty');
+      if (blank) blank.remove();
+      list.insertBefore(row({text: text, at: mine ? nowHHMM() : ''}, true), list.firstChild);
+      input.value = '';
+      celebrate(c);
+      queueWins();
+    };
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.keyCode === 13){ e.preventDefault(); commit(); }
+    });
+    btn.addEventListener('click', commit);
+    add.appendChild(input); add.appendChild(btn);
+    c.appendChild(add);
+  }
+  return c;
+}
+function refreshWinsEmpty(list){
+  if (list.querySelector('.winrow') || list.querySelector('.empty')) return;
+  list.appendChild(h('div','empty', D.meta.is_today
+    ? 'Nothing written down yet. Finishing anything counts.'
+    : 'Nothing written down for that day.'));
+}
+function nowHHMM(){
+  const d = new Date();
+  return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+}
+/* a small burst, because a win with no noise is just another row */
+function celebrate(cardEl){
+  const colors = ['--s1','--s2','--s4','--s5','--s6'];
+  for (let i = 0; i < 14; i++){
+    const bit = h('span','confetti');
+    const angle = (Math.PI * (0.15 + 0.7 * (i / 13)));
+    const dist = 46 + Math.random() * 54;
+    bit.style.setProperty('--dx', (Math.cos(angle) * dist * (Math.random()<.5?-1:1)).toFixed(0)+'px');
+    bit.style.setProperty('--dy', (-Math.sin(angle) * dist + 40).toFixed(0)+'px');
+    bit.style.setProperty('--rot', (Math.random()*540-270).toFixed(0)+'deg');
+    bit.style.background = cssv(colors[i % colors.length]);
+    bit.style.animationDelay = (i * 14) + 'ms';
+    cardEl.appendChild(bit);
+    setTimeout(() => bit.remove(), 1400 + i * 14);
+  }
+}
+let winTimer;
+function queueWins(){
+  clearTimeout(winTimer);
+  winTimer = setTimeout(() => {
+    const items = [];
+    document.querySelectorAll('.winlist .winrow').forEach(r => {
+      const text = r.querySelector('.wintext').textContent.trim();
+      if (text) items.push({text: text, at: r.dataset.at || ''});
+    });
+    const b = bridge();
+    if (!b){ toast('Open this from the cat to save changes'); return; }
+    b.postMessage({action:'saveWins', date: D.meta.date, items: items});
+    toast('Saved \u2726');
+  }, 700);
+}
+
+
+/* ---------- the wish wall ---------- */
+function wishWall(){
+  const wall = h('section','wishwall');
+  const list = D.wishes || [];
+  const done = list.filter(w => w.granted).length;
+
+  const head = h('div','wishhead');
+  head.appendChild(h('h3','','Wish wall \u2727'));
+  const count = h('span','count');
+  head.appendChild(count);
+  wall.appendChild(head);
+  wall.appendChild(h('p','wishcap',
+    'No dates, nothing overdue. Write each one in the present tense, as though it '+
+    'has already happened, and let it sit here where you will keep seeing it.'));
+
+  const grid = h('div','wishgrid');
+  /* the tally has to move the moment one comes true, or ticking a wish off
+     feels like nothing happened */
+  const retally = () => {
+    const all = grid.querySelectorAll('.wish').length;
+    const got = grid.querySelectorAll('.wish.granted').length;
+    count.textContent = !all ? ''
+      : (got ? got + ' of ' + all + ' came true' : all + ' on the wall');
+  };
+  const tile = (w, fresh) => {
+    const t = h('div','wish' + (w.granted ? ' granted' : '') + (fresh ? ' new' : ''));
+    t.dataset.since = w.since || todayISO();
+    t.dataset.granted = w.granted || '';
+
+    const txt = h('div','wishtext');
+    txt.contentEditable = 'true';
+    txt.textContent = w.text || '';
+    txt.dataset.ph = 'I am\u2026';
+    txt.addEventListener('input', queueWishes);
+    txt.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.keyCode === 13){ e.preventDefault(); txt.blur(); }
+    });
+    t.appendChild(txt);
+
+    const foot = h('div','wishfoot');
+    const held = h('span','wishheld');
+    const tick = h('button','wishtick','');
+    const paint = () => {
+      if (t.dataset.granted){
+        held.textContent = 'came true ' + t.dataset.granted.slice(5).replace('-','/');
+        tick.textContent = '\u2726 granted';
+        t.classList.add('granted');
+      } else {
+        const days = daysSince(t.dataset.since);
+        held.textContent = days <= 0 ? 'from today'
+          : 'held ' + days + ' day' + (days > 1 ? 's' : '');
+        tick.textContent = 'it came true';
+        t.classList.remove('granted');
+      }
+    };
+    tick.addEventListener('click', () => {
+      const wasGranted = !!t.dataset.granted;
+      t.dataset.granted = wasGranted ? '' : todayISO();
+      paint();
+      retally();
+      if (!wasGranted) celebrate(t);
+      queueWishes();
+    });
+    paint();
+    foot.appendChild(held); foot.appendChild(tick);
+    t.appendChild(foot);
+
+    const del = h('button','del','&times;');
+    del.title = 'take it off the wall';
+    del.addEventListener('click', () => { t.remove(); retally(); queueWishes(); });
+    t.appendChild(del);
+    return t;
+  };
+  list.forEach(w => grid.appendChild(tile(w, false)));
+  if (!list.length)
+    grid.appendChild(h('div','empty','The wall is empty. Put the first one up.'));
+  wall.appendChild(grid);
+  retally();
+
+  const add = h('div','wishadd');
+  const btn = h('button',null,'\u2727 add a wish');
+  btn.addEventListener('click', () => {
+    const blank = grid.querySelector('.empty');
+    if (blank) blank.remove();
+    const t = tile({text:'', since: todayISO(), granted:''}, true);
+    grid.insertBefore(t, grid.firstChild);
+    retally();
+    t.querySelector('.wishtext').focus();
+  });
+  add.appendChild(btn); wall.appendChild(add);
+  return wall;
+}
+function daysSince(iso){
+  const a = new Date(iso + 'T00:00:00'), b = new Date();
+  b.setHours(0,0,0,0);
+  return Math.max(0, Math.round((b - a) / 86400000));
+}
+let wishTimer;
+function queueWishes(){
+  clearTimeout(wishTimer);
+  wishTimer = setTimeout(() => {
+    const items = [];
+    document.querySelectorAll('.wishgrid .wish').forEach(t => {
+      const text = t.querySelector('.wishtext').textContent.trim();
+      if (text) items.push({text: text, since: t.dataset.since || todayISO(),
+                            granted: t.dataset.granted || ''});
+    });
+    const b = bridge();
+    if (!b){ toast('Open this from the cat to save changes'); return; }
+    b.postMessage({action:'saveWishes', items: items});
+    toast('Saved \u2727');
+  }, 700);
 }
 
 /* ---------- ask ---------- */
@@ -1474,6 +1779,7 @@ function render(scope){
           'were at the keyboard, when Claude was working, or during a meeting. '+
           fmt(d.total_seconds)+' is the clock: every slot once, however many things were in it.'));
       const rail = h('aside','rail');
+      rail.appendChild(winsCard());
       rail.appendChild(railCard());
       rail.appendChild(goodNewsCard());
       rail.appendChild(askCard());

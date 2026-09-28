@@ -15,7 +15,7 @@ from AppKit import (
 from Foundation import NSObject, NSTimer
 from PyObjCTools import AppHelper
 
-from . import calsync, chat, config, dashboard, db, goodnews, pipeline, report, sources, tracker, ui
+from . import calsync, chat, config, dashboard, db, goodnews, pipeline, report, sources, tracker, ui, wins, wishes
 from .paths import ASSETS_DIR, DATA_DIR, LOG_DIR, REPORT_DIR
 
 LOG_PATH = os.path.join(LOG_DIR, "catlendar.log")
@@ -451,6 +451,25 @@ class CatlendarDelegate(NSObject):
         elif action == "editBlock":
             self._edit_block(body)
             self.refresh_after_edit("block edit")
+        elif action == "saveWishes":
+            before = wishes.granted_count()
+            count = wishes.save(body.get("items") or [])
+            log.info("wishes saved (%d on the wall)", count)
+            if wishes.granted_count() > before and self.pet is not None:
+                self.pet.move("celebrate")     # one of them came true
+        elif action == "saveWins":
+            import datetime as _dt
+            raw = str(body.get("date") or "")
+            try:
+                day = _dt.date.fromisoformat(raw) if raw else report.today()
+            except ValueError:
+                day = report.today()
+            before = len(wins.for_day(day))
+            count = wins.replace_day(day, body.get("items") or [])
+            log.info("wins saved for %s (%d in the file)", day, count)
+            if len(wins.for_day(day)) > before and self.pet is not None:
+                self.pet.move("celebrate")      # the cat is pleased for you
+            self.refresh_after_edit("wins")
         elif action == "saveManual":
             rows = []
             for r in body.get("rows") or []:

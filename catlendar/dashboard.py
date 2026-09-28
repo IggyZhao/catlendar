@@ -3,7 +3,7 @@ import datetime as dt
 import json
 import os
 
-from . import db, goodnews, pipeline, report
+from . import db, goodnews, pipeline, report, wins, wishes
 from .paths import ASSETS_DIR, REPORT_DIR
 
 TEMPLATE = os.path.join(ASSETS_DIR, "dashboard.html")
@@ -42,6 +42,9 @@ def build_payload(today=None, scope="day"):
     payload["status"] = report.current_status()
     payload["pipeline"] = pipeline.summary(report.today())   # deadlines are always relative to now
     payload["goodnews"] = goodnews.load()
+    payload["wins"] = wins.for_day(today)
+    payload["wins_stats"] = wins.stats(report.today())
+    payload["wishes"] = wishes.load()
     payload["meta"]["now"] = int(dt.datetime.now().timestamp())
     payload["meta"]["initial_scope"] = scope
     payload["meta"]["date"] = today.isoformat()
